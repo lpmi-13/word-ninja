@@ -237,18 +237,25 @@ function spawnWord() {
   const wordWidth = measureWordWidth(data.word, fontSize);
   const padding = 30;
 
-  // Launch from bottom, random horizontal position
-  const fromLeft = Math.random() > 0.5;
-  const x = fromLeft
-    ? padding + Math.random() * (W * 0.3)
-    : W * 0.7 - padding - wordWidth + Math.random() * (W * 0.3);
+  // Random horizontal position, keeping word fully visible
+  const x = padding + Math.random() * (W - wordWidth - padding * 2);
 
-  const y = H + 20;
+  // Start at bottom of viewport (just inside, accounting for font height)
+  const y = H - fontSize;
 
-  // Velocity: upward with some horizontal drift
-  const vx = (Math.random() - 0.5) * 1.5;
-  const vy = -(H * 0.012 + Math.random() * H * 0.005);
-  const gravity = H * 0.00004;
+  // Target apex: between 10% and 20% from top of viewport
+  const apexY = H * (0.10 + Math.random() * 0.10);
+
+  // Calculate physics to hit the desired apex
+  // At apex, vy = 0. Using v^2 = v0^2 + 2*a*d where a=gravity, d=distance
+  // We need vy_initial such that it reaches apexY from y
+  const riseDistance = y - apexY; // positive (going up)
+  const gravity = 0.15 + Math.random() * 0.05; // pixels per frame^2
+  // v0 = sqrt(2 * g * d)
+  const vy = -Math.sqrt(2 * gravity * riseDistance);
+
+  // Slight horizontal drift with varying angles
+  const vx = (Math.random() - 0.5) * 3;
 
   // Measure the pixel position of the split point
   ctx.font = `bold ${fontSize}px 'Segoe UI', Tahoma, sans-serif`;
@@ -396,24 +403,9 @@ function drawWord(w) {
   roundRect(ctx, offsetX - pad, -w.fontSize * 0.6, w.wordWidth + pad * 2, w.fontSize * 1.2, 8);
   ctx.fill();
 
-  // Draw first half
+  // Draw word in uniform color
   ctx.fillStyle = '#ffffff';
-  ctx.fillText(w.first, offsetX, 0);
-
-  // Draw split indicator (subtle dashed line)
-  const splitOffX = offsetX + w.firstHalfWidth;
-  ctx.strokeStyle = 'rgba(255, 200, 50, 0.4)';
-  ctx.setLineDash([3, 3]);
-  ctx.lineWidth = 2;
-  ctx.beginPath();
-  ctx.moveTo(splitOffX, -w.fontSize * 0.5);
-  ctx.lineTo(splitOffX, w.fontSize * 0.5);
-  ctx.stroke();
-  ctx.setLineDash([]);
-
-  // Draw second half
-  ctx.fillStyle = '#dddddd';
-  ctx.fillText(w.second, splitOffX + 2, 0);
+  ctx.fillText(w.word, offsetX, 0);
 
   ctx.restore();
 }
@@ -493,15 +485,20 @@ function update(dt) {
   }
 
   // Update flying words
+  const timeScale = dt / 16.67; // normalize to 60fps
   for (let i = words.length - 1; i >= 0; i--) {
     const w = words[i];
-    w.x += w.vx;
-    w.vy += w.gravity;
-    w.y += w.vy;
-    w.rotation += w.rotationSpeed;
+    w.x += w.vx * timeScale;
+    w.vy += w.gravity * timeScale;
+    w.y += w.vy * timeScale;
+    w.rotation += w.rotationSpeed * timeScale;
 
-    // Word fell off screen without being sliced
-    if (w.y > H + 50) {
+    // Keep word horizontally within viewport
+    if (w.x < 0) { w.x = 0; w.vx = Math.abs(w.vx) * 0.5; }
+    if (w.x + w.wordWidth > W) { w.x = W - w.wordWidth; w.vx = -Math.abs(w.vx) * 0.5; }
+
+    // Word fell back to bottom of viewport without being sliced
+    if (w.y > H - w.fontSize * 0.5 && w.vy > 0) {
       words.splice(i, 1);
       missWord();
     }
