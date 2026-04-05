@@ -1,0 +1,652 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Word Ninja - Academic Word Slicer</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  overflow: hidden;
+  background: #1a0a2e;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+canvas {
+  display: block;
+  position: absolute;
+  top: 0;
+  left: 0;
+}
+
+#ui-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 10;
+}
+
+#score-display {
+  position: absolute;
+  top: 20px;
+  left: 20px;
+  color: #ffd700;
+  font-size: 28px;
+  font-weight: bold;
+  text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
+}
+
+#lives-display {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  color: #ff4444;
+  font-size: 28px;
+  text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
+}
+
+#combo-display {
+  position: absolute;
+  top: 60px;
+  left: 20px;
+  color: #ff8800;
+  font-size: 20px;
+  font-weight: bold;
+  text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+
+#start-screen, #game-over-screen {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: rgba(10, 5, 30, 0.95);
+  pointer-events: auto;
+  z-index: 20;
+}
+
+#game-over-screen { display: none; }
+
+h1 {
+  color: #ffd700;
+  font-size: 52px;
+  text-shadow: 0 0 20px rgba(255, 215, 0, 0.5);
+  margin-bottom: 10px;
+}
+
+.subtitle {
+  color: #aaa;
+  font-size: 18px;
+  margin-bottom: 40px;
+}
+
+.instruction {
+  color: #ccc;
+  font-size: 16px;
+  max-width: 500px;
+  text-align: center;
+  line-height: 1.6;
+  margin-bottom: 30px;
+  padding: 0 20px;
+}
+
+.btn {
+  background: linear-gradient(135deg, #ff6b35, #ff4444);
+  color: white;
+  border: none;
+  padding: 16px 48px;
+  font-size: 22px;
+  border-radius: 50px;
+  cursor: pointer;
+  text-transform: uppercase;
+  font-weight: bold;
+  letter-spacing: 2px;
+  box-shadow: 0 4px 15px rgba(255, 68, 68, 0.4);
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.btn:hover {
+  transform: scale(1.05);
+  box-shadow: 0 6px 20px rgba(255, 68, 68, 0.6);
+}
+
+#final-score {
+  color: #ffd700;
+  font-size: 48px;
+  font-weight: bold;
+  margin: 20px 0;
+}
+
+#final-label {
+  color: #aaa;
+  font-size: 20px;
+}
+
+.slash-trail {
+  position: absolute;
+  pointer-events: none;
+  z-index: 5;
+}
+</style>
+</head>
+<body>
+
+<canvas id="game-canvas"></canvas>
+
+<div id="ui-overlay">
+  <div id="score-display">Score: 0</div>
+  <div id="lives-display"></div>
+  <div id="combo-display"></div>
+</div>
+
+<div id="start-screen">
+  <h1>Word Ninja</h1>
+  <div class="subtitle">Academic Word Slicer</div>
+  <div class="instruction">
+    Swipe through academic words at their syllable boundary to slice them!
+    For example, slice "con|cept" between "con" and "cept".
+    Miss too many words and it's game over!
+  </div>
+  <button class="btn" id="start-btn">Play</button>
+</div>
+
+<div id="game-over-screen">
+  <h1>Game Over</h1>
+  <div id="final-label">Final Score</div>
+  <div id="final-score">0</div>
+  <button class="btn" id="restart-btn">Play Again</button>
+</div>
+
+<script>
+const WORDS = [{"word":"abstract","splitIndex":3,"first":"abs","second":"tract"},{"word":"abstracts","splitIndex":3,"first":"abs","second":"tracts"},{"word":"access","splitIndex":2,"first":"ac","second":"cess"},{"word":"accessed","splitIndex":2,"first":"ac","second":"cessed"},{"word":"achieve","splitIndex":1,"first":"a","second":"chieve"},{"word":"achieved","splitIndex":1,"first":"a","second":"chieved"},{"word":"achieves","splitIndex":1,"first":"a","second":"chieves"},{"word":"adapt","splitIndex":1,"first":"a","second":"dapt"},{"word":"adapts","splitIndex":1,"first":"a","second":"dapts"},{"word":"adjust","splitIndex":2,"first":"ad","second":"just"},{"word":"adjusts","splitIndex":2,"first":"ad","second":"justs"},{"word":"adult","splitIndex":1,"first":"a","second":"dult"},{"word":"adults","splitIndex":1,"first":"a","second":"dults"},{"word":"affect","splitIndex":2,"first":"af","second":"fect"},{"word":"affects","splitIndex":2,"first":"af","second":"fects"},{"word":"aided","splitIndex":2,"first":"ai","second":"ded"},{"word":"aiding","splitIndex":2,"first":"ai","second":"ding"},{"word":"alter","splitIndex":2,"first":"al","second":"ter"},{"word":"altered","splitIndex":2,"first":"al","second":"tered"},{"word":"alters","splitIndex":2,"first":"al","second":"ters"},{"word":"amend","splitIndex":1,"first":"a","second":"mend"},{"word":"amends","splitIndex":1,"first":"a","second":"mends"},{"word":"append","splitIndex":2,"first":"ap","second":"pend"},{"word":"approach","splitIndex":2,"first":"ap","second":"proach"},{"word":"approached","splitIndex":2,"first":"ap","second":"proached"},{"word":"aspect","splitIndex":1,"first":"a","second":"spect"},{"word":"aspects","splitIndex":1,"first":"a","second":"spects"},{"word":"assess","splitIndex":2,"first":"as","second":"sess"},{"word":"assessed","splitIndex":2,"first":"as","second":"sessed"},{"word":"assign","splitIndex":2,"first":"as","second":"sign"},{"word":"assigned","splitIndex":2,"first":"as","second":"signed"},{"word":"assigns","splitIndex":2,"first":"as","second":"signs"},{"word":"assist","splitIndex":2,"first":"as","second":"sist"},{"word":"assists","splitIndex":2,"first":"as","second":"sists"},{"word":"assume","splitIndex":2,"first":"as","second":"sume"},{"word":"assumed","splitIndex":2,"first":"as","second":"sumed"},{"word":"assumes","splitIndex":2,"first":"as","second":"sumes"},{"word":"assure","splitIndex":2,"first":"as","second":"sure"},{"word":"assured","splitIndex":2,"first":"as","second":"sured"},{"word":"assures","splitIndex":2,"first":"as","second":"sures"},{"word":"attach","splitIndex":2,"first":"at","second":"tach"},{"word":"attached","splitIndex":2,"first":"at","second":"tached"},{"word":"attain","splitIndex":2,"first":"at","second":"tain"},{"word":"attained","splitIndex":2,"first":"at","second":"tained"},{"word":"attains","splitIndex":2,"first":"at","second":"tains"},{"word":"author","splitIndex":2,"first":"au","second":"thor"},{"word":"authored","splitIndex":2,"first":"au","second":"thored"},{"word":"authors","splitIndex":2,"first":"au","second":"thors"},{"word":"aware","splitIndex":1,"first":"a","second":"ware"},{"word":"behalf","splitIndex":2,"first":"be","second":"half"},{"word":"biased","splitIndex":3,"first":"bi","second":"ased"},{"word":"bonded","splitIndex":3,"first":"bon","second":"ded"},{"word":"bonding","splitIndex":3,"first":"bon","second":"ding"},{"word":"briefing","splitIndex":5,"first":"brief","second":"ing"},{"word":"briefly","splitIndex":5,"first":"brief","second":"ly"},{"word":"bulky","splitIndex":3,"first":"bul","second":"ky"},{"word":"ceaseless","splitIndex":5,"first":"cease","second":"less"},{"word":"ceases","splitIndex":4,"first":"ceas","second":"es"},{"word":"ceasing","splitIndex":4,"first":"ceas","second":"ing"},{"word":"challenge","splitIndex":4,"first":"chal","second":"lenge"},{"word":"challenged","splitIndex":4,"first":"chal","second":"lenged"},{"word":"channel","splitIndex":4,"first":"chan","second":"nel"},{"word":"channels","splitIndex":4,"first":"chan","second":"nels"},{"word":"chapter","splitIndex":4,"first":"chap","second":"ter"},{"word":"chapters","splitIndex":4,"first":"chap","second":"ters"},{"word":"charted","splitIndex":4,"first":"char","second":"ted"},{"word":"charting","splitIndex":4,"first":"char","second":"ting"},{"word":"cited","splitIndex":2,"first":"ci","second":"ted"},{"word":"citing","splitIndex":2,"first":"ci","second":"ting"},{"word":"civil","splitIndex":2,"first":"ci","second":"vil"},{"word":"classic","splitIndex":4,"first":"clas","second":"sic"},{"word":"classics","splitIndex":4,"first":"clas","second":"sics"},{"word":"clauses","splitIndex":4,"first":"claus","second":"es"},{"word":"coded","splitIndex":2,"first":"co","second":"ded"},{"word":"coding","splitIndex":2,"first":"co","second":"ding"},{"word":"collapse","splitIndex":3,"first":"col","second":"lapse"},{"word":"collapsed","splitIndex":3,"first":"col","second":"lapsed"},{"word":"colleague","splitIndex":3,"first":"col","second":"league"},{"word":"colleagues","splitIndex":3,"first":"col","second":"leagues"},{"word":"commence","splitIndex":3,"first":"com","second":"mence"},{"word":"commenced","splitIndex":3,"first":"com","second":"menced"},{"word":"comment","splitIndex":3,"first":"com","second":"ment"},{"word":"comments","splitIndex":3,"first":"com","second":"ments"},{"word":"commit","splitIndex":3,"first":"com","second":"mit"},{"word":"commits","splitIndex":3,"first":"com","second":"mits"},{"word":"compile","splitIndex":3,"first":"com","second":"pile"},{"word":"compiled","splitIndex":3,"first":"com","second":"piled"},{"word":"compiles","splitIndex":3,"first":"com","second":"piles"},{"word":"complex","splitIndex":3,"first":"com","second":"plex"},{"word":"compound","splitIndex":3,"first":"com","second":"pound"},{"word":"compounds","splitIndex":3,"first":"com","second":"pounds"},{"word":"comprise","splitIndex":3,"first":"com","second":"prise"},{"word":"comprised","splitIndex":3,"first":"com","second":"prised"},{"word":"compute","splitIndex":3,"first":"com","second":"pute"},{"word":"conceive","splitIndex":3,"first":"con","second":"ceive"},{"word":"conceived","splitIndex":3,"first":"con","second":"ceived"},{"word":"concept","splitIndex":3,"first":"con","second":"cept"},{"word":"concepts","splitIndex":3,"first":"con","second":"cepts"},{"word":"conclude","splitIndex":3,"first":"con","second":"clude"},{"word":"concludes","splitIndex":3,"first":"con","second":"cludes"},{"word":"conduct","splitIndex":3,"first":"con","second":"duct"},{"word":"conducts","splitIndex":3,"first":"con","second":"ducts"},{"word":"confer","splitIndex":3,"first":"con","second":"fer"},{"word":"conferred","splitIndex":3,"first":"con","second":"ferred"},{"word":"confers","splitIndex":3,"first":"con","second":"fers"},{"word":"confine","splitIndex":3,"first":"con","second":"fine"},{"word":"confined","splitIndex":3,"first":"con","second":"fined"},{"word":"confines","splitIndex":3,"first":"con","second":"fines"},{"word":"confirm","splitIndex":3,"first":"con","second":"firm"},{"word":"confirmed","splitIndex":3,"first":"con","second":"firmed"},{"word":"confirms","splitIndex":3,"first":"con","second":"firms"},{"word":"conflict","splitIndex":3,"first":"con","second":"flict"},{"word":"conflicts","splitIndex":3,"first":"con","second":"flicts"},{"word":"conform","splitIndex":3,"first":"con","second":"form"},{"word":"conformed","splitIndex":3,"first":"con","second":"formed"},{"word":"conforms","splitIndex":3,"first":"con","second":"forms"},{"word":"consent","splitIndex":3,"first":"con","second":"sent"},{"word":"consents","splitIndex":3,"first":"con","second":"sents"},{"word":"consist","splitIndex":3,"first":"con","second":"sist"},{"word":"consists","splitIndex":3,"first":"con","second":"sists"},{"word":"constant","splitIndex":3,"first":"con","second":"stant"},{"word":"constants","splitIndex":3,"first":"con","second":"stants"},{"word":"constrain","splitIndex":4,"first":"cons","second":"train"},{"word":"constrained","splitIndex":4,"first":"cons","second":"trained"},{"word":"constrains","splitIndex":4,"first":"cons","second":"trains"},{"word":"constraint","splitIndex":4,"first":"cons","second":"traint"},{"word":"constraints","splitIndex":4,"first":"cons","second":"traints"},{"word":"construct","splitIndex":4,"first":"cons","second":"truct"},{"word":"constructs","splitIndex":4,"first":"cons","second":"tructs"},{"word":"consult","splitIndex":3,"first":"con","second":"sult"},{"word":"consults","splitIndex":3,"first":"con","second":"sults"},{"word":"consume","splitIndex":3,"first":"con","second":"sume"},{"word":"consumed","splitIndex":3,"first":"con","second":"sumed"},{"word":"consumes","splitIndex":3,"first":"con","second":"sumes"},{"word":"contact","splitIndex":3,"first":"con","second":"tact"},{"word":"contacts","splitIndex":3,"first":"con","second":"tacts"},{"word":"context","splitIndex":3,"first":"con","second":"text"},{"word":"contexts","splitIndex":3,"first":"con","second":"texts"},{"word":"contract","splitIndex":3,"first":"con","second":"tract"},{"word":"contracts","splitIndex":3,"first":"con","second":"tracts"},{"word":"contrast","splitIndex":3,"first":"con","second":"trast"},{"word":"contrasts","splitIndex":3,"first":"con","second":"trasts"},{"word":"convene","splitIndex":3,"first":"con","second":"vene"},{"word":"convened","splitIndex":3,"first":"con","second":"vened"},{"word":"convenes","splitIndex":3,"first":"con","second":"venes"},{"word":"converse","splitIndex":3,"first":"con","second":"verse"},{"word":"convert","splitIndex":3,"first":"con","second":"vert"},{"word":"converts","splitIndex":3,"first":"con","second":"verts"},{"word":"convince","splitIndex":3,"first":"con","second":"vince"},{"word":"convinced","splitIndex":3,"first":"con","second":"vinced"},{"word":"couple","splitIndex":3,"first":"cou","second":"ple"},{"word":"coupled","splitIndex":3,"first":"cou","second":"pled"},{"word":"couples","splitIndex":3,"first":"cou","second":"ples"},{"word":"coupling","splitIndex":3,"first":"cou","second":"pling"},{"word":"create","splitIndex":3,"first":"cre","second":"ate"},{"word":"creates","splitIndex":3,"first":"cre","second":"ates"},{"word":"credit","splitIndex":3,"first":"cre","second":"dit"},{"word":"credits","splitIndex":3,"first":"cre","second":"dits"},{"word":"crucial","splitIndex":3,"first":"cru","second":"cial"},{"word":"culture","splitIndex":3,"first":"cul","second":"ture"},{"word":"cultured","splitIndex":3,"first":"cul","second":"tured"},{"word":"cultures","splitIndex":3,"first":"cul","second":"tures"},{"word":"cycle","splitIndex":2,"first":"cy","second":"cle"},{"word":"cycled","splitIndex":2,"first":"cy","second":"cled"},{"word":"cycles","splitIndex":2,"first":"cy","second":"cles"},{"word":"cyclic","splitIndex":2,"first":"cy","second":"clic"},{"word":"data","splitIndex":2,"first":"da","second":"ta"},{"word":"debate","splitIndex":2,"first":"de","second":"bate"},{"word":"debates","splitIndex":2,"first":"de","second":"bates"},{"word":"decade","splitIndex":2,"first":"de","second":"cade"},{"word":"decades","splitIndex":2,"first":"de","second":"cades"},{"word":"decline","splitIndex":2,"first":"de","second":"cline"},{"word":"declined","splitIndex":2,"first":"de","second":"clined"},{"word":"declines","splitIndex":2,"first":"de","second":"clines"},{"word":"deduce","splitIndex":2,"first":"de","second":"duce"},{"word":"deduced","splitIndex":2,"first":"de","second":"duced"},{"word":"define","splitIndex":2,"first":"de","second":"fine"},{"word":"defined","splitIndex":2,"first":"de","second":"fined"},{"word":"defines","splitIndex":2,"first":"de","second":"fines"},{"word":"denied","splitIndex":2,"first":"de","second":"nied"},{"word":"denies","splitIndex":2,"first":"de","second":"nies"},{"word":"denote","splitIndex":2,"first":"de","second":"note"},{"word":"denotes","splitIndex":2,"first":"de","second":"notes"},{"word":"deny","splitIndex":2,"first":"de","second":"ny"},{"word":"depress","splitIndex":2,"first":"de","second":"press"},{"word":"depressed","splitIndex":2,"first":"de","second":"pressed"},{"word":"derive","splitIndex":2,"first":"de","second":"rive"},{"word":"derived","splitIndex":2,"first":"de","second":"rived"},{"word":"derives","splitIndex":2,"first":"de","second":"rives"},{"word":"design","splitIndex":2,"first":"de","second":"sign"},{"word":"designed","splitIndex":2,"first":"de","second":"signed"},{"word":"designs","splitIndex":2,"first":"de","second":"signs"},{"word":"despite","splitIndex":2,"first":"de","second":"spite"},{"word":"detect","splitIndex":2,"first":"de","second":"tect"},{"word":"detects","splitIndex":2,"first":"de","second":"tects"},{"word":"device","splitIndex":2,"first":"de","second":"vice"},{"word":"devote","splitIndex":2,"first":"de","second":"vote"},{"word":"devotes","splitIndex":2,"first":"de","second":"votes"},{"word":"discrete","splitIndex":3,"first":"dis","second":"crete"},{"word":"displace","splitIndex":3,"first":"dis","second":"place"},{"word":"displaced","splitIndex":3,"first":"dis","second":"placed"},{"word":"display","splitIndex":3,"first":"dis","second":"play"},{"word":"displayed","splitIndex":3,"first":"dis","second":"played"},{"word":"displays","splitIndex":3,"first":"dis","second":"plays"},{"word":"dispose","splitIndex":2,"first":"di","second":"spose"},{"word":"disposed","splitIndex":2,"first":"di","second":"sposed"},{"word":"distinct","splitIndex":2,"first":"di","second":"stinct"},{"word":"distort","splitIndex":2,"first":"di","second":"stort"},{"word":"distorts","splitIndex":2,"first":"di","second":"storts"},{"word":"diverse","splitIndex":2,"first":"di","second":"verse"},{"word":"domain","splitIndex":2,"first":"do","second":"main"},{"word":"domains","splitIndex":2,"first":"do","second":"mains"},{"word":"drafted","splitIndex":4,"first":"draf","second":"ted"},{"word":"drafting","splitIndex":4,"first":"draf","second":"ting"},{"word":"drama","splitIndex":3,"first":"dra","second":"ma"},{"word":"dramas","splitIndex":3,"first":"dra","second":"mas"},{"word":"edit","splitIndex":1,"first":"e","second":"dit"},{"word":"edits","splitIndex":1,"first":"e","second":"dits"},{"word":"emerge","splitIndex":1,"first":"e","second":"merge"},{"word":"emerged","splitIndex":1,"first":"e","second":"merged"},{"word":"enforce","splitIndex":2,"first":"en","second":"force"},{"word":"enforced","splitIndex":2,"first":"en","second":"forced"},{"word":"enhance","splitIndex":2,"first":"en","second":"hance"},{"word":"enhanced","splitIndex":2,"first":"en","second":"hanced"},{"word":"ensure","splitIndex":2,"first":"en","second":"sure"},{"word":"ensured","splitIndex":2,"first":"en","second":"sured"},{"word":"ensures","splitIndex":2,"first":"en","second":"sures"},{"word":"equate","splitIndex":1,"first":"e","second":"quate"},{"word":"equates","splitIndex":1,"first":"e","second":"quates"},{"word":"equip","splitIndex":1,"first":"e","second":"quip"},{"word":"equipped","splitIndex":1,"first":"e","second":"quipped"},{"word":"equips","splitIndex":1,"first":"e","second":"quips"},{"word":"erode","splitIndex":1,"first":"e","second":"rode"},{"word":"erodes","splitIndex":1,"first":"e","second":"rodes"},{"word":"error","splitIndex":2,"first":"er","second":"ror"},{"word":"errors","splitIndex":2,"first":"er","second":"rors"},{"word":"estate","splitIndex":1,"first":"e","second":"state"},{"word":"estates","splitIndex":1,"first":"e","second":"states"},{"word":"ethic","splitIndex":1,"first":"e","second":"thic"},{"word":"ethics","splitIndex":1,"first":"e","second":"thics"},{"word":"ethnic","splitIndex":2,"first":"et","second":"hnic"},{"word":"evolve","splitIndex":1,"first":"e","second":"volve"},{"word":"evolved","splitIndex":1,"first":"e","second":"volved"},{"word":"evolves","splitIndex":1,"first":"e","second":"volves"},{"word":"exceed","splitIndex":2,"first":"ex","second":"ceed"},{"word":"exceeds","splitIndex":2,"first":"ex","second":"ceeds"},{"word":"exclude","splitIndex":2,"first":"ex","second":"clude"},{"word":"excludes","splitIndex":2,"first":"ex","second":"cludes"},{"word":"expand","splitIndex":2,"first":"ex","second":"pand"},{"word":"expands","splitIndex":2,"first":"ex","second":"pands"},{"word":"expert","splitIndex":2,"first":"ex","second":"pert"},{"word":"experts","splitIndex":2,"first":"ex","second":"perts"},{"word":"exploit","splitIndex":2,"first":"ex","second":"ploit"},{"word":"exploits","splitIndex":2,"first":"ex","second":"ploits"},{"word":"export","splitIndex":2,"first":"ex","second":"port"},{"word":"exports","splitIndex":2,"first":"ex","second":"ports"},{"word":"expose","splitIndex":2,"first":"ex","second":"pose"},{"word":"exposed","splitIndex":2,"first":"ex","second":"posed"},{"word":"extract","splitIndex":2,"first":"ex","second":"tract"},{"word":"extracts","splitIndex":2,"first":"ex","second":"tracts"},{"word":"factor","splitIndex":2,"first":"fa","second":"ctor"},{"word":"factored","splitIndex":2,"first":"fa","second":"ctored"},{"word":"factors","splitIndex":2,"first":"fa","second":"ctors"},{"word":"feature","splitIndex":3,"first":"fea","second":"ture"},{"word":"featured","splitIndex":3,"first":"fea","second":"tured"},{"word":"features","splitIndex":3,"first":"fea","second":"tures"},{"word":"filing","splitIndex":2,"first":"fi","second":"ling"},{"word":"final","splitIndex":2,"first":"fi","second":"nal"},{"word":"finals","splitIndex":2,"first":"fi","second":"nals"},{"word":"finance","splitIndex":2,"first":"fi","second":"nance"},{"word":"financed","splitIndex":2,"first":"fi","second":"nanced"},{"word":"finite","splitIndex":2,"first":"fi","second":"nite"},{"word":"focus","splitIndex":2,"first":"fo","second":"cus"},{"word":"focused","splitIndex":2,"first":"fo","second":"cused"},{"word":"focussed","splitIndex":2,"first":"fo","second":"cussed"},{"word":"format","splitIndex":3,"first":"for","second":"mat"},{"word":"formats","splitIndex":3,"first":"for","second":"mats"},{"word":"founded","splitIndex":4,"first":"foun","second":"ded"},{"word":"founder","splitIndex":4,"first":"foun","second":"der"},{"word":"founders","splitIndex":4,"first":"foun","second":"ders"},{"word":"founding","splitIndex":4,"first":"foun","second":"ding"},{"word":"framework","splitIndex":5,"first":"frame","second":"work"},{"word":"frameworks","splitIndex":5,"first":"frame","second":"works"},{"word":"function","splitIndex":3,"first":"fun","second":"ction"},{"word":"functioned","splitIndex":3,"first":"fun","second":"ctioned"},{"word":"functions","splitIndex":3,"first":"fun","second":"ctions"},{"word":"funded","splitIndex":3,"first":"fun","second":"ded"},{"word":"funder","splitIndex":3,"first":"fun","second":"der"},{"word":"funders","splitIndex":3,"first":"fun","second":"ders"},{"word":"funding","splitIndex":3,"first":"fun","second":"ding"},{"word":"gender","splitIndex":3,"first":"gen","second":"der"},{"word":"genders","splitIndex":3,"first":"gen","second":"ders"},{"word":"global","splitIndex":3,"first":"glo","second":"bal"},{"word":"graded","splitIndex":3,"first":"gra","second":"ded"},{"word":"grading","splitIndex":3,"first":"gra","second":"ding"},{"word":"granted","splitIndex":4,"first":"gran","second":"ted"},{"word":"granting","splitIndex":4,"first":"gran","second":"ting"},{"word":"guideline","splitIndex":5,"first":"guide","second":"line"},{"word":"guidelines","splitIndex":5,"first":"guide","second":"lines"},{"word":"highlight","splitIndex":4,"first":"high","second":"light"},{"word":"highlights","splitIndex":4,"first":"high","second":"lights"},{"word":"ignore","splitIndex":2,"first":"ig","second":"nore"},{"word":"ignored","splitIndex":2,"first":"ig","second":"nored"},{"word":"ignores","splitIndex":2,"first":"ig","second":"nores"},{"word":"image","splitIndex":1,"first":"i","second":"mage"},{"word":"impact","splitIndex":2,"first":"im","second":"pact"},{"word":"impacts","splitIndex":2,"first":"im","second":"pacts"},{"word":"implied","splitIndex":2,"first":"im","second":"plied"},{"word":"implies","splitIndex":2,"first":"im","second":"plies"},{"word":"imply","splitIndex":2,"first":"im","second":"ply"},{"word":"impose","splitIndex":2,"first":"im","second":"pose"},{"word":"imposed","splitIndex":2,"first":"im","second":"posed"},{"word":"incline","splitIndex":2,"first":"in","second":"cline"},{"word":"inclined","splitIndex":2,"first":"in","second":"clined"},{"word":"inclines","splitIndex":2,"first":"in","second":"clines"},{"word":"income","splitIndex":2,"first":"in","second":"come"},{"word":"incomes","splitIndex":2,"first":"in","second":"comes"},{"word":"index","splitIndex":2,"first":"in","second":"dex"},{"word":"indexed","splitIndex":2,"first":"in","second":"dexed"},{"word":"induce","splitIndex":2,"first":"in","second":"duce"},{"word":"induced","splitIndex":2,"first":"in","second":"duced"},{"word":"infer","splitIndex":2,"first":"in","second":"fer"},{"word":"inferred","splitIndex":2,"first":"in","second":"ferred"},{"word":"infers","splitIndex":2,"first":"in","second":"fers"},{"word":"injure","splitIndex":2,"first":"in","second":"jure"},{"word":"injured","splitIndex":2,"first":"in","second":"jured"},{"word":"injures","splitIndex":2,"first":"in","second":"jures"},{"word":"input","splitIndex":2,"first":"in","second":"put"},{"word":"inputs","splitIndex":2,"first":"in","second":"puts"},{"word":"insert","splitIndex":2,"first":"in","second":"sert"},{"word":"inserts","splitIndex":2,"first":"in","second":"serts"},{"word":"insight","splitIndex":2,"first":"in","second":"sight"},{"word":"insights","splitIndex":2,"first":"in","second":"sights"},{"word":"inspect","splitIndex":2,"first":"in","second":"spect"},{"word":"inspects","splitIndex":2,"first":"in","second":"spects"},{"word":"instance","splitIndex":2,"first":"in","second":"stance"},{"word":"instruct","splitIndex":3,"first":"ins","second":"truct"},{"word":"instructs","splitIndex":3,"first":"ins","second":"tructs"},{"word":"intense","splitIndex":2,"first":"in","second":"tense"},{"word":"invest","splitIndex":2,"first":"in","second":"vest"},{"word":"invests","splitIndex":2,"first":"in","second":"vests"},{"word":"invoke","splitIndex":2,"first":"in","second":"voke"},{"word":"invoked","splitIndex":2,"first":"in","second":"voked"},{"word":"invokes","splitIndex":2,"first":"in","second":"vokes"},{"word":"involve","splitIndex":2,"first":"in","second":"volve"},{"word":"involved","splitIndex":2,"first":"in","second":"volved"},{"word":"involves","splitIndex":2,"first":"in","second":"volves"},{"word":"issue","splitIndex":2,"first":"is","second":"sue"},{"word":"issued","splitIndex":2,"first":"is","second":"sued"},{"word":"issues","splitIndex":2,"first":"is","second":"sues"},{"word":"item","splitIndex":1,"first":"i","second":"tem"},{"word":"items","splitIndex":1,"first":"i","second":"tems"},{"word":"journal","splitIndex":4,"first":"jour","second":"nal"},{"word":"journals","splitIndex":4,"first":"jour","second":"nals"},{"word":"label","splitIndex":2,"first":"la","second":"bel"},{"word":"labeled","splitIndex":2,"first":"la","second":"beled"},{"word":"labelled","splitIndex":2,"first":"la","second":"belled"},{"word":"labels","splitIndex":2,"first":"la","second":"bels"},{"word":"labor","splitIndex":2,"first":"la","second":"bor"},{"word":"labored","splitIndex":2,"first":"la","second":"bored"},{"word":"labors","splitIndex":2,"first":"la","second":"bors"},{"word":"labour","splitIndex":2,"first":"la","second":"bour"},{"word":"layered","splitIndex":4,"first":"laye","second":"red"},{"word":"lecture","splitIndex":3,"first":"lec","second":"ture"},{"word":"lectured","splitIndex":3,"first":"lec","second":"tured"},{"word":"lectures","splitIndex":3,"first":"lec","second":"tures"},{"word":"legal","splitIndex":2,"first":"le","second":"gal"},{"word":"levies","splitIndex":2,"first":"le","second":"vies"},{"word":"levy","splitIndex":2,"first":"le","second":"vy"},{"word":"licence","splitIndex":2,"first":"li","second":"cence"},{"word":"license","splitIndex":2,"first":"li","second":"cense"},{"word":"licensed","splitIndex":2,"first":"li","second":"censed"},{"word":"likewise","splitIndex":4,"first":"like","second":"wise"},{"word":"linkage","splitIndex":3,"first":"lin","second":"kage"},{"word":"linking","splitIndex":3,"first":"lin","second":"king"},{"word":"locate","splitIndex":2,"first":"lo","second":"cate"},{"word":"logic","splitIndex":2,"first":"lo","second":"gic"},{"word":"maintain","splitIndex":4,"first":"main","second":"tain"},{"word":"maintained","splitIndex":4,"first":"main","second":"tained"},{"word":"maintains","splitIndex":4,"first":"main","second":"tains"},{"word":"major","splitIndex":2,"first":"ma","second":"jor"},{"word":"margin","splitIndex":3,"first":"mar","second":"gin"},{"word":"margins","splitIndex":3,"first":"mar","second":"gins"},{"word":"mature","splitIndex":2,"first":"ma","second":"ture"},{"word":"matured","splitIndex":2,"first":"ma","second":"tured"},{"word":"matures","splitIndex":2,"first":"ma","second":"tures"},{"word":"mental","splitIndex":3,"first":"men","second":"tal"},{"word":"method","splitIndex":2,"first":"me","second":"thod"},{"word":"methods","splitIndex":2,"first":"me","second":"thods"},{"word":"migrant","splitIndex":2,"first":"mi","second":"grant"},{"word":"migrants","splitIndex":2,"first":"mi","second":"grants"},{"word":"migrate","splitIndex":2,"first":"mi","second":"grate"},{"word":"migrates","splitIndex":2,"first":"mi","second":"grates"},{"word":"minor","splitIndex":2,"first":"mi","second":"nor"},{"word":"minors","splitIndex":2,"first":"mi","second":"nors"},{"word":"motive","splitIndex":2,"first":"mo","second":"tive"},{"word":"motives","splitIndex":2,"first":"mo","second":"tives"},{"word":"negate","splitIndex":2,"first":"ne","second":"gate"},{"word":"negates","splitIndex":2,"first":"ne","second":"gates"},{"word":"network","splitIndex":3,"first":"net","second":"work"},{"word":"networked","splitIndex":3,"first":"net","second":"worked"},{"word":"networks","splitIndex":3,"first":"net","second":"works"},{"word":"neutral","splitIndex":3,"first":"neu","second":"tral"},{"word":"normal","splitIndex":3,"first":"nor","second":"mal"},{"word":"notion","splitIndex":2,"first":"no","second":"tion"},{"word":"notions","splitIndex":2,"first":"no","second":"tions"},{"word":"obtain","splitIndex":2,"first":"ob","second":"tain"},{"word":"obtained","splitIndex":2,"first":"ob","second":"tained"},{"word":"obtains","splitIndex":2,"first":"ob","second":"tains"},{"word":"occur","splitIndex":2,"first":"oc","second":"cur"},{"word":"occurred","splitIndex":2,"first":"oc","second":"curred"},{"word":"occurs","splitIndex":2,"first":"oc","second":"curs"},{"word":"offset","splitIndex":2,"first":"of","second":"fset"},{"word":"offsets","splitIndex":2,"first":"of","second":"fsets"},{"word":"option","splitIndex":2,"first":"op","second":"tion"},{"word":"options","splitIndex":2,"first":"op","second":"tions"},{"word":"outcome","splitIndex":3,"first":"out","second":"come"},{"word":"outcomes","splitIndex":3,"first":"out","second":"comes"},{"word":"output","splitIndex":3,"first":"out","second":"put"},{"word":"outputs","splitIndex":3,"first":"out","second":"puts"},{"word":"panel","splitIndex":2,"first":"pa","second":"nel"},{"word":"panels","splitIndex":2,"first":"pa","second":"nels"},{"word":"partner","splitIndex":3,"first":"par","second":"tner"},{"word":"partners","splitIndex":3,"first":"par","second":"tners"},{"word":"passive","splitIndex":3,"first":"pas","second":"sive"},{"word":"perceive","splitIndex":3,"first":"per","second":"ceive"},{"word":"perceived","splitIndex":3,"first":"per","second":"ceived"},{"word":"perceives","splitIndex":3,"first":"per","second":"ceives"},{"word":"percent","splitIndex":3,"first":"per","second":"cent"},{"word":"persist","splitIndex":3,"first":"per","second":"sist"},{"word":"persists","splitIndex":3,"first":"per","second":"sists"},{"word":"phases","splitIndex":4,"first":"phas","second":"es"},{"word":"phasing","splitIndex":4,"first":"phas","second":"ing"},{"word":"pluses","splitIndex":3,"first":"plus","second":"es"},{"word":"portion","splitIndex":3,"first":"por","second":"tion"},{"word":"portions","splitIndex":3,"first":"por","second":"tions"},{"word":"poses","splitIndex":2,"first":"po","second":"ses"},{"word":"posing","splitIndex":2,"first":"po","second":"sing"},{"word":"precede","splitIndex":3,"first":"pre","second":"cede"},{"word":"precedes","splitIndex":3,"first":"pre","second":"cedes"},{"word":"precise","splitIndex":3,"first":"pre","second":"cise"},{"word":"predict","splitIndex":3,"first":"pre","second":"dict"},{"word":"predicts","splitIndex":3,"first":"pre","second":"dicts"},{"word":"presume","splitIndex":3,"first":"pre","second":"sume"},{"word":"presumed","splitIndex":3,"first":"pre","second":"sumed"},{"word":"presumes","splitIndex":3,"first":"pre","second":"sumes"},{"word":"proceed","splitIndex":3,"first":"pro","second":"ceed"},{"word":"proceeds","splitIndex":3,"first":"pro","second":"ceeds"},{"word":"process","splitIndex":3,"first":"pro","second":"cess"},{"word":"processed","splitIndex":3,"first":"pro","second":"cessed"},{"word":"project","splitIndex":3,"first":"pro","second":"ject"},{"word":"projects","splitIndex":3,"first":"pro","second":"jects"},{"word":"promote","splitIndex":3,"first":"pro","second":"mote"},{"word":"promotes","splitIndex":3,"first":"pro","second":"motes"},{"word":"prospect","splitIndex":3,"first":"pro","second":"spect"},{"word":"prospects","splitIndex":3,"first":"pro","second":"spects"},{"word":"publish","splitIndex":2,"first":"pu","second":"blish"},{"word":"published","splitIndex":2,"first":"pu","second":"blished"},{"word":"purchase","splitIndex":3,"first":"pur","second":"chase"},{"word":"purchased","splitIndex":3,"first":"pur","second":"chased"},{"word":"pursue","splitIndex":3,"first":"pur","second":"sue"},{"word":"pursued","splitIndex":3,"first":"pur","second":"sued"},{"word":"pursues","splitIndex":3,"first":"pur","second":"sues"},{"word":"pursuit","splitIndex":3,"first":"pur","second":"suit"},{"word":"pursuits","splitIndex":3,"first":"pur","second":"suits"},{"word":"quoted","splitIndex":3,"first":"quo","second":"ted"},{"word":"quoting","splitIndex":3,"first":"quo","second":"ting"},{"word":"random","splitIndex":3,"first":"ran","second":"dom"},{"word":"ranges","splitIndex":3,"first":"ran","second":"ges"},{"word":"ranging","splitIndex":3,"first":"ran","second":"ging"},{"word":"redraft","splitIndex":2,"first":"re","second":"draft"},{"word":"refine","splitIndex":2,"first":"re","second":"fine"},{"word":"refined","splitIndex":2,"first":"re","second":"fined"},{"word":"refines","splitIndex":2,"first":"re","second":"fines"},{"word":"regime","splitIndex":2,"first":"re","second":"gime"},{"word":"regimes","splitIndex":2,"first":"re","second":"gimes"},{"word":"region","splitIndex":2,"first":"re","second":"gion"},{"word":"regions","splitIndex":2,"first":"re","second":"gions"},{"word":"reject","splitIndex":2,"first":"re","second":"ject"},{"word":"rejects","splitIndex":2,"first":"re","second":"jects"},{"word":"relax","splitIndex":2,"first":"re","second":"lax"},{"word":"relaxed","splitIndex":2,"first":"re","second":"laxed"},{"word":"release","splitIndex":2,"first":"re","second":"lease"},{"word":"released","splitIndex":2,"first":"re","second":"leased"},{"word":"relied","splitIndex":2,"first":"re","second":"lied"},{"word":"relies","splitIndex":2,"first":"re","second":"lies"},{"word":"rely","splitIndex":2,"first":"re","second":"ly"},{"word":"remove","splitIndex":2,"first":"re","second":"move"},{"word":"removed","splitIndex":2,"first":"re","second":"moved"},{"word":"removes","splitIndex":2,"first":"re","second":"moves"},{"word":"research","splitIndex":2,"first":"re","second":"search"},{"word":"researched","splitIndex":2,"first":"re","second":"searched"},{"word":"reside","splitIndex":2,"first":"re","second":"side"},{"word":"resides","splitIndex":2,"first":"re","second":"sides"},{"word":"resolve","splitIndex":2,"first":"re","second":"solve"},{"word":"resolved","splitIndex":2,"first":"re","second":"solved"},{"word":"resolves","splitIndex":2,"first":"re","second":"solves"},{"word":"resource","splitIndex":2,"first":"re","second":"source"},{"word":"respond","splitIndex":2,"first":"re","second":"spond"},{"word":"responds","splitIndex":2,"first":"re","second":"sponds"},{"word":"response","splitIndex":2,"first":"re","second":"sponse"},{"word":"restore","splitIndex":2,"first":"re","second":"store"},{"word":"restored","splitIndex":2,"first":"re","second":"stored"},{"word":"restores","splitIndex":2,"first":"re","second":"stores"},{"word":"restrain","splitIndex":3,"first":"res","second":"train"},{"word":"restrained","splitIndex":3,"first":"res","second":"trained"},{"word":"restrains","splitIndex":3,"first":"res","second":"trains"},{"word":"restraint","splitIndex":3,"first":"res","second":"traint"},{"word":"restraints","splitIndex":3,"first":"res","second":"traints"},{"word":"restrict","splitIndex":3,"first":"res","second":"trict"},{"word":"restricts","splitIndex":3,"first":"res","second":"tricts"},{"word":"retain","splitIndex":2,"first":"re","second":"tain"},{"word":"retained","splitIndex":2,"first":"re","second":"tained"},{"word":"retains","splitIndex":2,"first":"re","second":"tains"},{"word":"reveal","splitIndex":2,"first":"re","second":"veal"},{"word":"revealed","splitIndex":2,"first":"re","second":"vealed"},{"word":"reveals","splitIndex":2,"first":"re","second":"veals"},{"word":"reverse","splitIndex":2,"first":"re","second":"verse"},{"word":"reversed","splitIndex":2,"first":"re","second":"versed"},{"word":"revise","splitIndex":2,"first":"re","second":"vise"},{"word":"revised","splitIndex":2,"first":"re","second":"vised"},{"word":"rigid","splitIndex":2,"first":"ri","second":"gid"},{"word":"routed","splitIndex":3,"first":"rou","second":"ted"},{"word":"routing","splitIndex":3,"first":"rou","second":"ting"},{"word":"schedule","splitIndex":4,"first":"sched","second":"ule"},{"word":"scheduled","splitIndex":4,"first":"sched","second":"uled"},{"word":"schedules","splitIndex":4,"first":"sched","second":"ules"},{"word":"scheming","splitIndex":4,"first":"schem","second":"ing"},{"word":"section","splitIndex":2,"first":"se","second":"ction"},{"word":"sectioned","splitIndex":2,"first":"se","second":"ctioned"},{"word":"sections","splitIndex":2,"first":"se","second":"ctions"},{"word":"sector","splitIndex":2,"first":"se","second":"ctor"},{"word":"sectors","splitIndex":2,"first":"se","second":"ctors"},{"word":"secure","splitIndex":2,"first":"se","second":"cure"},{"word":"secured","splitIndex":2,"first":"se","second":"cured"},{"word":"secures","splitIndex":2,"first":"se","second":"cures"},{"word":"seeking","splitIndex":3,"first":"see","second":"king"},{"word":"select","splitIndex":2,"first":"se","second":"lect"},{"word":"selects","splitIndex":2,"first":"se","second":"lects"},{"word":"sequence","splitIndex":2,"first":"se","second":"quence"},{"word":"series","splitIndex":2,"first":"se","second":"ries"},{"word":"sexes","splitIndex":2,"first":"se","second":"xes"},{"word":"shifted","splitIndex":4,"first":"shif","second":"ted"},{"word":"shifting","splitIndex":4,"first":"shif","second":"ting"},{"word":"somewhat","splitIndex":4,"first":"some","second":"what"},{"word":"sources","splitIndex":4,"first":"sour","second":"ces"},{"word":"sourcing","splitIndex":4,"first":"sour","second":"cing"},{"word":"stable","splitIndex":3,"first":"sta","second":"ble"},{"word":"status","splitIndex":3,"first":"sta","second":"tus"},{"word":"stresses","splitIndex":5,"first":"stress","second":"es"},{"word":"stressful","splitIndex":5,"first":"stress","second":"ful"},{"word":"stressing","splitIndex":5,"first":"stress","second":"ing"},{"word":"structure","splitIndex":5,"first":"struc","second":"ture"},{"word":"structured","splitIndex":5,"first":"struc","second":"tured"},{"word":"structures","splitIndex":5,"first":"struc","second":"tures"},{"word":"styling","splitIndex":3,"first":"sty","second":"ling"},{"word":"stylish","splitIndex":3,"first":"sty","second":"lish"},{"word":"stylize","splitIndex":3,"first":"sty","second":"lize"},{"word":"stylized","splitIndex":3,"first":"sty","second":"lized"},{"word":"submit","splitIndex":3,"first":"sub","second":"mit"},{"word":"submits","splitIndex":3,"first":"sub","second":"mits"},{"word":"summing","splitIndex":3,"first":"sum","second":"ming"},{"word":"survey","splitIndex":3,"first":"sur","second":"vey"},{"word":"surveyed","splitIndex":3,"first":"sur","second":"veyed"},{"word":"surveys","splitIndex":3,"first":"sur","second":"veys"},{"word":"survive","splitIndex":3,"first":"sur","second":"vive"},{"word":"survived","splitIndex":3,"first":"sur","second":"vived"},{"word":"survives","splitIndex":3,"first":"sur","second":"vives"},{"word":"suspend","splitIndex":2,"first":"su","second":"spend"},{"word":"suspends","splitIndex":2,"first":"su","second":"spends"},{"word":"sustain","splitIndex":2,"first":"su","second":"stain"},{"word":"sustained","splitIndex":2,"first":"su","second":"stained"},{"word":"sustains","splitIndex":2,"first":"su","second":"stains"},{"word":"symbol","splitIndex":3,"first":"sym","second":"bol"},{"word":"symbols","splitIndex":3,"first":"sym","second":"bols"},{"word":"taping","splitIndex":2,"first":"ta","second":"ping"},{"word":"target","splitIndex":3,"first":"tar","second":"get"},{"word":"targets","splitIndex":3,"first":"tar","second":"gets"},{"word":"teaming","splitIndex":3,"first":"tea","second":"ming"},{"word":"technique","splitIndex":3,"first":"tech","second":"nique"},{"word":"techniques","splitIndex":3,"first":"tech","second":"niques"},{"word":"tensely","splitIndex":3,"first":"ten","second":"sely"},{"word":"tension","splitIndex":3,"first":"ten","second":"sion"},{"word":"tensions","splitIndex":3,"first":"ten","second":"sions"},{"word":"theories","splitIndex":3,"first":"the","second":"ories"},{"word":"theory","splitIndex":3,"first":"the","second":"ory"},{"word":"thereby","splitIndex":5,"first":"there","second":"by"},{"word":"theses","splitIndex":3,"first":"the","second":"ses"},{"word":"thesis","splitIndex":3,"first":"the","second":"sis"},{"word":"topic","splitIndex":2,"first":"to","second":"pic"},{"word":"topics","splitIndex":2,"first":"to","second":"pics"},{"word":"traces","splitIndex":3,"first":"tra","second":"ces"},{"word":"tracing","splitIndex":3,"first":"tra","second":"cing"},{"word":"transfer","splitIndex":4,"first":"tran","second":"sfer"},{"word":"transferred","splitIndex":4,"first":"tran","second":"sferred"},{"word":"transfers","splitIndex":4,"first":"tran","second":"sfers"},{"word":"transform","splitIndex":4,"first":"tran","second":"sform"},{"word":"transformed","splitIndex":4,"first":"tran","second":"sformed"},{"word":"transforms","splitIndex":4,"first":"tran","second":"sforms"},{"word":"transit","splitIndex":4,"first":"tran","second":"sit"},{"word":"transits","splitIndex":4,"first":"tran","second":"sits"},{"word":"transmit","splitIndex":4,"first":"tran","second":"smit"},{"word":"transmits","splitIndex":4,"first":"tran","second":"smits"},{"word":"transport","splitIndex":4,"first":"tran","second":"sport"},{"word":"transports","splitIndex":4,"first":"tran","second":"sports"},{"word":"trigger","splitIndex":4,"first":"trig","second":"ger"},{"word":"triggered","splitIndex":4,"first":"trig","second":"gered"},{"word":"triggers","splitIndex":4,"first":"trig","second":"gers"},{"word":"unique","splitIndex":1,"first":"u","second":"nique"},{"word":"unstressed","splitIndex":3,"first":"un","second":"stressed"},{"word":"valid","splitIndex":2,"first":"va","second":"lid"},{"word":"varied","splitIndex":2,"first":"va","second":"ried"},{"word":"varies","splitIndex":2,"first":"va","second":"ries"},{"word":"vary","splitIndex":2,"first":"va","second":"ry"},{"word":"version","splitIndex":3,"first":"ver","second":"sion"},{"word":"versions","splitIndex":3,"first":"ver","second":"sions"},{"word":"vision","splitIndex":2,"first":"vi","second":"sion"},{"word":"visions","splitIndex":2,"first":"vi","second":"sions"},{"word":"volume","splitIndex":2,"first":"vo","second":"lume"},{"word":"volumes","splitIndex":2,"first":"vo","second":"lumes"},{"word":"welfare","splitIndex":3,"first":"wel","second":"fare"},{"word":"whereas","splitIndex":5,"first":"where","second":"as"},{"word":"whereby","splitIndex":5,"first":"where","second":"by"},{"word":"widespread","splitIndex":4,"first":"wide","second":"spread"}];
+
+const canvas = document.getElementById('game-canvas');
+const ctx = canvas.getContext('2d');
+
+let W, H;
+function resize() {
+  W = canvas.width = window.innerWidth;
+  H = canvas.height = window.innerHeight;
+}
+resize();
+window.addEventListener('resize', resize);
+
+// Game state
+let score = 0;
+let lives = 3;
+let combo = 0;
+let gameRunning = false;
+let words = []; // active flying words
+let slicedParts = []; // sliced halves flying away
+let particles = [];
+let slashTrail = [];
+let spawnTimer = 0;
+let spawnInterval = 2000;
+let difficulty = 0;
+let lastTime = 0;
+let animFrame = null;
+
+// Swipe tracking
+let isPointerDown = false;
+let pointerPath = [];
+
+const scoreEl = document.getElementById('score-display');
+const livesEl = document.getElementById('lives-display');
+const comboEl = document.getElementById('combo-display');
+const startScreen = document.getElementById('start-screen');
+const gameOverScreen = document.getElementById('game-over-screen');
+const finalScoreEl = document.getElementById('final-score');
+
+function updateUI() {
+  scoreEl.textContent = `Score: ${score}`;
+  livesEl.textContent = Array(lives).fill('\u2764').join(' ');
+  if (combo > 1) {
+    comboEl.textContent = `Combo x${combo}!`;
+    comboEl.style.opacity = 1;
+  } else {
+    comboEl.style.opacity = 0;
+  }
+}
+
+function pickWord() {
+  return WORDS[Math.floor(Math.random() * WORDS.length)];
+}
+
+function measureWordWidth(word, fontSize) {
+  ctx.font = `bold ${fontSize}px 'Segoe UI', Tahoma, sans-serif`;
+  return ctx.measureText(word).width;
+}
+
+function spawnWord() {
+  const data = pickWord();
+  const fontSize = Math.min(48, Math.max(32, W * 0.05));
+  const wordWidth = measureWordWidth(data.word, fontSize);
+  const padding = 30;
+
+  // Launch from bottom, random horizontal position
+  const fromLeft = Math.random() > 0.5;
+  const x = fromLeft
+    ? padding + Math.random() * (W * 0.3)
+    : W * 0.7 - padding - wordWidth + Math.random() * (W * 0.3);
+
+  const y = H + 20;
+
+  // Velocity: upward with some horizontal drift
+  const vx = (Math.random() - 0.5) * 1.5;
+  const vy = -(H * 0.012 + Math.random() * H * 0.005);
+  const gravity = H * 0.00004;
+
+  // Measure the pixel position of the split point
+  ctx.font = `bold ${fontSize}px 'Segoe UI', Tahoma, sans-serif`;
+  const firstHalfWidth = ctx.measureText(data.first).width;
+
+  words.push({
+    word: data.word,
+    first: data.first,
+    second: data.second,
+    splitIndex: data.splitIndex,
+    x, y, vx, vy,
+    gravity,
+    fontSize,
+    wordWidth,
+    firstHalfWidth,
+    rotation: 0,
+    rotationSpeed: (Math.random() - 0.5) * 0.02,
+    missed: false,
+    alpha: 1,
+  });
+}
+
+function sliceWord(wordObj, sliceY) {
+  const { first, second, x, y, vx, vy, fontSize, firstHalfWidth, wordWidth, rotation } = wordObj;
+
+  // Create two halves that fly apart
+  slicedParts.push({
+    text: first,
+    x: x,
+    y: y,
+    vx: vx - 2 - Math.random() * 2,
+    vy: vy - 1 - Math.random(),
+    gravity: wordObj.gravity * 1.5,
+    fontSize,
+    rotation: rotation - 0.05,
+    rotationSpeed: -0.03 - Math.random() * 0.03,
+    alpha: 1,
+    color: '#44ff88',
+  });
+
+  slicedParts.push({
+    text: second,
+    x: x + firstHalfWidth + 4,
+    y: y,
+    vx: vx + 2 + Math.random() * 2,
+    vy: vy - 1 - Math.random(),
+    gravity: wordObj.gravity * 1.5,
+    fontSize,
+    rotation: rotation + 0.05,
+    rotationSpeed: 0.03 + Math.random() * 0.03,
+    alpha: 1,
+    color: '#44ff88',
+  });
+
+  // Spawn particles at slice point
+  const sliceX = x + firstHalfWidth;
+  for (let i = 0; i < 15; i++) {
+    particles.push({
+      x: sliceX + (Math.random() - 0.5) * 10,
+      y: y + (Math.random() - 0.5) * 10,
+      vx: (Math.random() - 0.5) * 8,
+      vy: (Math.random() - 0.5) * 8 - 2,
+      life: 1,
+      decay: 0.02 + Math.random() * 0.02,
+      size: 2 + Math.random() * 4,
+      color: Math.random() > 0.5 ? '#ffd700' : '#ff8800',
+    });
+  }
+
+  combo++;
+  score += 10 * combo;
+  updateUI();
+}
+
+function missWord() {
+  lives--;
+  combo = 0;
+  updateUI();
+  if (lives <= 0) {
+    endGame();
+  }
+}
+
+function checkSlice(x1, y1, x2, y2) {
+  for (let i = words.length - 1; i >= 0; i--) {
+    const w = words[i];
+    const wordTop = w.y - w.fontSize * 0.8;
+    const wordBot = w.y + w.fontSize * 0.2;
+    const wordLeft = w.x - 10;
+    const wordRight = w.x + w.wordWidth + 10;
+
+    // Check if the swipe line intersects the word bounding box
+    if (!lineIntersectsRect(x1, y1, x2, y2, wordLeft, wordTop, wordRight, wordBot)) continue;
+
+    // Check if swipe crosses near the syllable boundary
+    const splitX = w.x + w.firstHalfWidth;
+    const bufferPx = Math.max(w.wordWidth * 0.2, 20); // 20% of word width or 20px buffer
+
+    // Find where the swipe line crosses the word's y range
+    const crossX = interpolateX(x1, y1, x2, y2, (wordTop + wordBot) / 2);
+    if (crossX !== null && Math.abs(crossX - splitX) < bufferPx) {
+      sliceWord(w, (y1 + y2) / 2);
+      words.splice(i, 1);
+    }
+  }
+}
+
+function interpolateX(x1, y1, x2, y2, targetY) {
+  if (Math.abs(y2 - y1) < 0.001) return (x1 + x2) / 2;
+  const t = (targetY - y1) / (y2 - y1);
+  if (t < -0.5 || t > 1.5) return null;
+  return x1 + t * (x2 - x1);
+}
+
+function lineIntersectsRect(x1, y1, x2, y2, rx, ry, rx2, ry2) {
+  // Simple check: does the line segment pass through or near the rect?
+  const minX = Math.min(x1, x2), maxX = Math.max(x1, x2);
+  const minY = Math.min(y1, y2), maxY = Math.max(y1, y2);
+  return !(maxX < rx || minX > rx2 || maxY < ry || minY > ry2);
+}
+
+// Drawing
+function drawBackground() {
+  const grad = ctx.createLinearGradient(0, 0, 0, H);
+  grad.addColorStop(0, '#0a0520');
+  grad.addColorStop(0.5, '#1a0a2e');
+  grad.addColorStop(1, '#0d1b2a');
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, W, H);
+}
+
+function drawWord(w) {
+  ctx.save();
+  ctx.globalAlpha = w.alpha;
+  ctx.translate(w.x + w.wordWidth / 2, w.y);
+  ctx.rotate(w.rotation);
+  ctx.font = `bold ${w.fontSize}px 'Segoe UI', Tahoma, sans-serif`;
+  ctx.textBaseline = 'middle';
+
+  const offsetX = -w.wordWidth / 2;
+
+  // Draw background pill
+  const pad = 12;
+  ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
+  roundRect(ctx, offsetX - pad, -w.fontSize * 0.6, w.wordWidth + pad * 2, w.fontSize * 1.2, 8);
+  ctx.fill();
+
+  // Draw first half
+  ctx.fillStyle = '#ffffff';
+  ctx.fillText(w.first, offsetX, 0);
+
+  // Draw split indicator (subtle dashed line)
+  const splitOffX = offsetX + w.firstHalfWidth;
+  ctx.strokeStyle = 'rgba(255, 200, 50, 0.4)';
+  ctx.setLineDash([3, 3]);
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(splitOffX, -w.fontSize * 0.5);
+  ctx.lineTo(splitOffX, w.fontSize * 0.5);
+  ctx.stroke();
+  ctx.setLineDash([]);
+
+  // Draw second half
+  ctx.fillStyle = '#dddddd';
+  ctx.fillText(w.second, splitOffX + 2, 0);
+
+  ctx.restore();
+}
+
+function drawSlicedPart(p) {
+  ctx.save();
+  ctx.globalAlpha = p.alpha;
+  ctx.translate(p.x, p.y);
+  ctx.rotate(p.rotation);
+  ctx.font = `bold ${p.fontSize}px 'Segoe UI', Tahoma, sans-serif`;
+  ctx.textBaseline = 'middle';
+  ctx.fillStyle = p.color;
+  ctx.shadowColor = p.color;
+  ctx.shadowBlur = 10;
+  ctx.fillText(p.text, 0, 0);
+  ctx.restore();
+}
+
+function drawParticles() {
+  for (const p of particles) {
+    ctx.save();
+    ctx.globalAlpha = p.life;
+    ctx.fillStyle = p.color;
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  }
+}
+
+function drawSlashTrail() {
+  if (slashTrail.length < 2) return;
+  ctx.save();
+  for (let i = 1; i < slashTrail.length; i++) {
+    const prev = slashTrail[i - 1];
+    const curr = slashTrail[i];
+    const alpha = curr.life;
+    const width = alpha * 4;
+    ctx.strokeStyle = `rgba(255, 255, 255, ${alpha})`;
+    ctx.lineWidth = width;
+    ctx.lineCap = 'round';
+    ctx.beginPath();
+    ctx.moveTo(prev.x, prev.y);
+    ctx.lineTo(curr.x, curr.y);
+    ctx.stroke();
+  }
+  ctx.restore();
+}
+
+function roundRect(ctx, x, y, w, h, r) {
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.lineTo(x + w - r, y);
+  ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+  ctx.lineTo(x + w, y + h - r);
+  ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+  ctx.lineTo(x + r, y + h);
+  ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+  ctx.lineTo(x, y + r);
+  ctx.quadraticCurveTo(x, y, x + r, y);
+  ctx.closePath();
+}
+
+// Game loop
+function update(dt) {
+  // Spawn words
+  spawnTimer += dt;
+  difficulty = Math.min(score / 500, 1); // ramp up over 500 points
+  const currentInterval = Math.max(800, spawnInterval - difficulty * 1200);
+  if (spawnTimer > currentInterval) {
+    spawnWord();
+    spawnTimer = 0;
+    // Occasionally spawn 2 at once at higher difficulty
+    if (difficulty > 0.5 && Math.random() < difficulty * 0.3) {
+      setTimeout(spawnWord, 200 + Math.random() * 300);
+    }
+  }
+
+  // Update flying words
+  for (let i = words.length - 1; i >= 0; i--) {
+    const w = words[i];
+    w.x += w.vx;
+    w.vy += w.gravity;
+    w.y += w.vy;
+    w.rotation += w.rotationSpeed;
+
+    // Word fell off screen without being sliced
+    if (w.y > H + 50) {
+      words.splice(i, 1);
+      missWord();
+    }
+  }
+
+  // Update sliced parts
+  for (let i = slicedParts.length - 1; i >= 0; i--) {
+    const p = slicedParts[i];
+    p.x += p.vx;
+    p.vy += p.gravity;
+    p.y += p.vy;
+    p.rotation += p.rotationSpeed;
+    p.alpha -= 0.008;
+    if (p.alpha <= 0 || p.y > H + 100) {
+      slicedParts.splice(i, 1);
+    }
+  }
+
+  // Update particles
+  for (let i = particles.length - 1; i >= 0; i--) {
+    const p = particles[i];
+    p.x += p.vx;
+    p.y += p.vy;
+    p.vy += 0.1;
+    p.life -= p.decay;
+    if (p.life <= 0) {
+      particles.splice(i, 1);
+    }
+  }
+
+  // Update slash trail
+  for (let i = slashTrail.length - 1; i >= 0; i--) {
+    slashTrail[i].life -= 0.05;
+    if (slashTrail[i].life <= 0) {
+      slashTrail.splice(i, 1);
+    }
+  }
+}
+
+function draw() {
+  drawBackground();
+  drawSlashTrail();
+  for (const w of words) drawWord(w);
+  for (const p of slicedParts) drawSlicedPart(p);
+  drawParticles();
+}
+
+function gameLoop(timestamp) {
+  if (!gameRunning) return;
+  const dt = lastTime ? timestamp - lastTime : 16;
+  lastTime = timestamp;
+  update(dt);
+  draw();
+  animFrame = requestAnimationFrame(gameLoop);
+}
+
+function startGame() {
+  score = 0;
+  lives = 3;
+  combo = 0;
+  words = [];
+  slicedParts = [];
+  particles = [];
+  slashTrail = [];
+  spawnTimer = 0;
+  lastTime = 0;
+  gameRunning = true;
+  updateUI();
+  startScreen.style.display = 'none';
+  gameOverScreen.style.display = 'none';
+  animFrame = requestAnimationFrame(gameLoop);
+}
+
+function endGame() {
+  gameRunning = false;
+  if (animFrame) cancelAnimationFrame(animFrame);
+  finalScoreEl.textContent = score;
+  gameOverScreen.style.display = 'flex';
+}
+
+// Input handling
+function getPointerPos(e) {
+  const touch = e.touches ? e.touches[0] : e;
+  return { x: touch.clientX, y: touch.clientY };
+}
+
+canvas.addEventListener('mousedown', (e) => {
+  if (!gameRunning) return;
+  isPointerDown = true;
+  const pos = getPointerPos(e);
+  pointerPath = [pos];
+});
+
+canvas.addEventListener('mousemove', (e) => {
+  if (!isPointerDown || !gameRunning) return;
+  const pos = getPointerPos(e);
+  pointerPath.push(pos);
+  slashTrail.push({ x: pos.x, y: pos.y, life: 1 });
+
+  if (pointerPath.length >= 2) {
+    const prev = pointerPath[pointerPath.length - 2];
+    const curr = pointerPath[pointerPath.length - 1];
+    checkSlice(prev.x, prev.y, curr.x, curr.y);
+  }
+});
+
+canvas.addEventListener('mouseup', () => {
+  isPointerDown = false;
+  pointerPath = [];
+});
+
+canvas.addEventListener('touchstart', (e) => {
+  e.preventDefault();
+  if (!gameRunning) return;
+  isPointerDown = true;
+  const pos = getPointerPos(e);
+  pointerPath = [pos];
+}, { passive: false });
+
+canvas.addEventListener('touchmove', (e) => {
+  e.preventDefault();
+  if (!isPointerDown || !gameRunning) return;
+  const touch = e.touches[0];
+  const pos = { x: touch.clientX, y: touch.clientY };
+  pointerPath.push(pos);
+  slashTrail.push({ x: pos.x, y: pos.y, life: 1 });
+
+  if (pointerPath.length >= 2) {
+    const prev = pointerPath[pointerPath.length - 2];
+    const curr = pointerPath[pointerPath.length - 1];
+    checkSlice(prev.x, prev.y, curr.x, curr.y);
+  }
+}, { passive: false });
+
+canvas.addEventListener('touchend', (e) => {
+  e.preventDefault();
+  isPointerDown = false;
+  pointerPath = [];
+}, { passive: false });
+
+document.getElementById('start-btn').addEventListener('click', startGame);
+document.getElementById('restart-btn').addEventListener('click', startGame);
+
+// Initial draw
+drawBackground();
+</script>
+</body>
+</html>
