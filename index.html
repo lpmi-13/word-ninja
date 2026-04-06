@@ -1,1 +1,862 @@
-PLACEHOLDER
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Word Slice - Academic Word Slicer</title>
+<link rel="icon" type="image/svg+xml" href="favicon.svg">
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  overflow: hidden;
+  background: #1a0a2e;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+canvas {
+  display: block;
+  position: absolute;
+  top: 0;
+  left: 0;
+}
+
+#ui-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 10;
+}
+
+#score-display {
+  position: absolute;
+  top: 20px;
+  left: 20px;
+  color: #ffd700;
+  font-size: 28px;
+  font-weight: bold;
+  text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
+}
+
+#lives-display {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  color: #ff4444;
+  font-size: 28px;
+  text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
+}
+
+#combo-display {
+  position: absolute;
+  top: 60px;
+  left: 20px;
+  color: #ff8800;
+  font-size: 20px;
+  font-weight: bold;
+  text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+
+#level-display {
+  position: absolute;
+  top: 60px;
+  right: 20px;
+  color: #88bbff;
+  font-size: 20px;
+  font-weight: bold;
+  text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
+}
+
+#level-announce {
+  position: absolute;
+  top: 40%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  color: #ffd700;
+  font-size: 48px;
+  font-weight: bold;
+  text-shadow: 0 0 20px rgba(255,215,0,0.6);
+  opacity: 0;
+  transition: opacity 0.5s;
+  pointer-events: none;
+  text-align: center;
+  white-space: pre-line;
+}
+
+#start-screen, #game-over-screen {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: rgba(10, 5, 30, 0.95);
+  pointer-events: auto;
+  z-index: 20;
+}
+
+#game-over-screen { display: none; }
+
+h1 {
+  color: #ffd700;
+  font-size: 52px;
+  text-shadow: 0 0 20px rgba(255, 215, 0, 0.5);
+  margin-bottom: 10px;
+}
+
+.subtitle {
+  color: #aaa;
+  font-size: 18px;
+  margin-bottom: 40px;
+}
+
+.instruction {
+  color: #ccc;
+  font-size: 16px;
+  max-width: 500px;
+  text-align: center;
+  line-height: 1.6;
+  margin-bottom: 30px;
+  padding: 0 20px;
+}
+
+.btn {
+  background: linear-gradient(135deg, #ff6b35, #ff4444);
+  color: white;
+  border: none;
+  padding: 16px 48px;
+  font-size: 22px;
+  border-radius: 50px;
+  cursor: pointer;
+  text-transform: uppercase;
+  font-weight: bold;
+  letter-spacing: 2px;
+  box-shadow: 0 4px 15px rgba(255, 68, 68, 0.4);
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.btn:hover {
+  transform: scale(1.05);
+  box-shadow: 0 6px 20px rgba(255, 68, 68, 0.6);
+}
+
+#final-score {
+  color: #ffd700;
+  font-size: 48px;
+  font-weight: bold;
+  margin: 20px 0;
+}
+
+#final-label {
+  color: #aaa;
+  font-size: 20px;
+}
+</style>
+</head>
+<body>
+
+<canvas id="game-canvas"></canvas>
+
+<div id="ui-overlay">
+  <div id="score-display">Score: 0</div>
+  <div id="lives-display"></div>
+  <div id="combo-display"></div>
+  <div id="level-display">Level 1</div>
+  <div id="level-announce"></div>
+</div>
+
+<div id="start-screen">
+  <h1>Word Slice</h1>
+  <div class="subtitle">Academic Word Slicer</div>
+  <div class="instruction">
+    Swipe through academic words at their syllable boundaries to slice them!
+    For example, slice "concept" between "con" and "cept".
+    Three-syllable words need two slices!
+  </div>
+  <button class="btn" id="start-btn">Play</button>
+</div>
+
+<div id="game-over-screen">
+  <h1>Game Over</h1>
+  <div id="final-label">Final Score</div>
+  <div id="final-score">0</div>
+  <button class="btn" id="restart-btn">Play Again</button>
+</div>
+
+<script src="words.js"></script>
+<script>
+// Compact data loaded from words.js: [word, splitIndex] for 2-syl, [word, split1, split2] for 3-syl
+
+// Unpack into usable format
+const WORDS_2SYL = _W2.map(d => ({
+  word: d[0], splitIndex: d[1],
+  first: d[0].slice(0, d[1]), second: d[0].slice(d[1])
+}));
+const WORDS_3SYL = _W3.map(d => ({
+  word: d[0], splitIndex1: d[1], splitIndex2: d[2],
+  syllables: [d[0].slice(0, d[1]), d[0].slice(d[1], d[2]), d[0].slice(d[2])]
+}));
+
+const canvas = document.getElementById('game-canvas');
+const ctx = canvas.getContext('2d');
+
+let W, H;
+function resize() {
+  W = canvas.width = window.innerWidth;
+  H = canvas.height = window.innerHeight;
+}
+resize();
+window.addEventListener('resize', resize);
+
+// Game state
+let score = 0;
+let lives = 3;
+let combo = 0;
+let gameRunning = false;
+let words = [];
+let slicedParts = [];
+let particles = [];
+let slashTrail = [];
+let spawnTimer = 0;
+let lastTime = 0;
+let animFrame = null;
+
+// Level state
+let level = 1;
+let wordsSpawnedThisLevel = 0;
+const wordsPerLevel = 10;
+let levelTransition = false;
+let levelAnnounceTimer = 0;
+
+// Swipe tracking
+let isPointerDown = false;
+let pointerPath = [];
+
+const scoreEl = document.getElementById('score-display');
+const livesEl = document.getElementById('lives-display');
+const comboEl = document.getElementById('combo-display');
+const levelEl = document.getElementById('level-display');
+const levelAnnounceEl = document.getElementById('level-announce');
+const startScreen = document.getElementById('start-screen');
+const gameOverScreen = document.getElementById('game-over-screen');
+const finalScoreEl = document.getElementById('final-score');
+
+function updateUI() {
+  scoreEl.textContent = `Score: ${score}`;
+  livesEl.textContent = Array(lives).fill('\u2764').join(' ');
+  levelEl.textContent = `Level ${level}`;
+  if (combo > 1) {
+    comboEl.textContent = `Combo x${combo}!`;
+    comboEl.style.opacity = 1;
+  } else {
+    comboEl.style.opacity = 0;
+  }
+}
+
+function currentSyllableCount() {
+  return level % 2 === 1 ? 2 : 3;
+}
+
+function currentWordList() {
+  return currentSyllableCount() === 2 ? WORDS_2SYL : WORDS_3SYL;
+}
+
+function pickWord() {
+  const list = currentWordList();
+  return list[Math.floor(Math.random() * list.length)];
+}
+
+function getSpawnInterval() {
+  return Math.max(600, 2000 - (level - 1) * 100);
+}
+
+function getGravityRange() {
+  const base = 0.15 + Math.min(level * 0.01, 0.15);
+  return [base, base + 0.05];
+}
+
+function measureWordWidth(word, fontSize) {
+  ctx.font = `bold ${fontSize}px 'Segoe UI', Tahoma, sans-serif`;
+  return ctx.measureText(word).width;
+}
+
+function spawnWord() {
+  if (levelTransition) return;
+
+  const data = pickWord();
+  const sylCount = currentSyllableCount();
+  const fontSize = Math.min(48, Math.max(32, W * 0.05));
+  const wordWidth = measureWordWidth(data.word, fontSize);
+  const padding = 30;
+
+  const x = padding + Math.random() * Math.max(0, W - wordWidth - padding * 2);
+  const y = H - fontSize;
+
+  const apexY = H * (0.10 + Math.random() * 0.10);
+  const riseDistance = y - apexY;
+  const [gMin, gMax] = getGravityRange();
+  const gravity = gMin + Math.random() * (gMax - gMin);
+  const vy = -Math.sqrt(2 * gravity * riseDistance);
+  const vx = (Math.random() - 0.5) * 3;
+
+  ctx.font = `bold ${fontSize}px 'Segoe UI', Tahoma, sans-serif`;
+
+  if (sylCount === 2) {
+    const firstHalfWidth = ctx.measureText(data.first).width;
+    words.push({
+      type: 2,
+      word: data.word,
+      first: data.first,
+      second: data.second,
+      x, y, vx, vy, gravity, fontSize, wordWidth,
+      firstHalfWidth,
+      rotation: 0,
+      rotationSpeed: (Math.random() - 0.5) * 0.02,
+      alpha: 1,
+    });
+  } else {
+    const syl = data.syllables;
+    const w1 = ctx.measureText(syl[0]).width;
+    const w2 = ctx.measureText(syl[1]).width;
+    words.push({
+      type: 3,
+      word: data.word,
+      syllables: syl.slice(),
+      sliceState: 'full',
+      x, y, vx, vy, gravity, fontSize, wordWidth,
+      sylWidths: [w1, w2, wordWidth - w1 - w2],
+      rotation: 0,
+      rotationSpeed: (Math.random() - 0.5) * 0.02,
+      alpha: 1,
+    });
+  }
+
+  wordsSpawnedThisLevel++;
+}
+
+function spawnParticles(px, py) {
+  for (let i = 0; i < 15; i++) {
+    particles.push({
+      x: px + (Math.random() - 0.5) * 10,
+      y: py + (Math.random() - 0.5) * 10,
+      vx: (Math.random() - 0.5) * 8,
+      vy: (Math.random() - 0.5) * 8 - 2,
+      life: 1,
+      decay: 0.02 + Math.random() * 0.02,
+      size: 2 + Math.random() * 4,
+      color: Math.random() > 0.5 ? '#ffd700' : '#ff8800',
+    });
+  }
+}
+
+function sliceWord2(wordObj) {
+  const { first, second, x, y, vx, vy, fontSize, firstHalfWidth, wordWidth, rotation, gravity } = wordObj;
+
+  slicedParts.push({
+    text: first, x, y,
+    vx: vx - 2 - Math.random() * 2,
+    vy: vy - 1 - Math.random(),
+    gravity: gravity * 1.5,
+    fontSize, rotation: rotation - 0.05,
+    rotationSpeed: -0.03 - Math.random() * 0.03,
+    alpha: 1, color: '#44ff88',
+  });
+  slicedParts.push({
+    text: second,
+    x: x + firstHalfWidth + 4, y,
+    vx: vx + 2 + Math.random() * 2,
+    vy: vy - 1 - Math.random(),
+    gravity: gravity * 1.5,
+    fontSize, rotation: rotation + 0.05,
+    rotationSpeed: 0.03 + Math.random() * 0.03,
+    alpha: 1, color: '#44ff88',
+  });
+
+  spawnParticles(x + firstHalfWidth, y);
+  combo++;
+  score += 10 * combo;
+  updateUI();
+}
+
+function sliceWord3(wordObj, side) {
+  const { syllables, x, y, vx, vy, fontSize, sylWidths, rotation, gravity, sliceState } = wordObj;
+
+  if (side === 'left' && sliceState === 'full') {
+    slicedParts.push({
+      text: syllables[0], x, y,
+      vx: vx - 3 - Math.random() * 2,
+      vy: vy - 1 - Math.random(),
+      gravity: gravity * 1.5,
+      fontSize, rotation: rotation - 0.05,
+      rotationSpeed: -0.03 - Math.random() * 0.03,
+      alpha: 1, color: '#44ff88',
+    });
+    spawnParticles(x + sylWidths[0], y);
+    wordObj.sliceState = 'no-left';
+    wordObj.x += sylWidths[0];
+    wordObj.word = syllables[1] + syllables[2];
+    wordObj.wordWidth = sylWidths[1] + sylWidths[2];
+    combo++;
+    score += 10 * combo;
+    updateUI();
+    return false;
+
+  } else if (side === 'right' && sliceState === 'full') {
+    slicedParts.push({
+      text: syllables[2],
+      x: x + sylWidths[0] + sylWidths[1], y,
+      vx: vx + 3 + Math.random() * 2,
+      vy: vy - 1 - Math.random(),
+      gravity: gravity * 1.5,
+      fontSize, rotation: rotation + 0.05,
+      rotationSpeed: 0.03 + Math.random() * 0.03,
+      alpha: 1, color: '#44ff88',
+    });
+    spawnParticles(x + sylWidths[0] + sylWidths[1], y);
+    wordObj.sliceState = 'no-right';
+    wordObj.word = syllables[0] + syllables[1];
+    wordObj.wordWidth = sylWidths[0] + sylWidths[1];
+    combo++;
+    score += 10 * combo;
+    updateUI();
+    return false;
+
+  } else if (sliceState === 'no-left' || sliceState === 'no-right') {
+    let textA, textB, splitPixelX;
+    if (sliceState === 'no-left') {
+      textA = syllables[1];
+      textB = syllables[2];
+      splitPixelX = x + sylWidths[1];
+    } else {
+      textA = syllables[0];
+      textB = syllables[1];
+      splitPixelX = x + sylWidths[0];
+    }
+
+    ctx.font = `bold ${fontSize}px 'Segoe UI', Tahoma, sans-serif`;
+    const wA = ctx.measureText(textA).width;
+
+    slicedParts.push({
+      text: textA, x, y,
+      vx: vx - 2 - Math.random() * 2,
+      vy: vy - 1 - Math.random(),
+      gravity: gravity * 1.5,
+      fontSize, rotation: rotation - 0.05,
+      rotationSpeed: -0.03 - Math.random() * 0.03,
+      alpha: 1, color: '#44ff88',
+    });
+    slicedParts.push({
+      text: textB,
+      x: x + wA + 2, y,
+      vx: vx + 2 + Math.random() * 2,
+      vy: vy - 1 - Math.random(),
+      gravity: gravity * 1.5,
+      fontSize, rotation: rotation + 0.05,
+      rotationSpeed: 0.03 + Math.random() * 0.03,
+      alpha: 1, color: '#44ff88',
+    });
+    spawnParticles(splitPixelX, y);
+    combo++;
+    score += 15 * combo;
+    updateUI();
+    return true;
+  }
+  return false;
+}
+
+function missWord() {
+  lives--;
+  combo = 0;
+  updateUI();
+  if (lives <= 0) endGame();
+}
+
+function checkSlice(x1, y1, x2, y2) {
+  for (let i = words.length - 1; i >= 0; i--) {
+    const w = words[i];
+    const wordTop = w.y - w.fontSize * 0.8;
+    const wordBot = w.y + w.fontSize * 0.2;
+    const wordLeft = w.x - 10;
+    const wordRight = w.x + w.wordWidth + 10;
+
+    if (!lineIntersectsRect(x1, y1, x2, y2, wordLeft, wordTop, wordRight, wordBot)) continue;
+
+    const crossX = interpolateX(x1, y1, x2, y2, (wordTop + wordBot) / 2);
+    if (crossX === null) continue;
+
+    if (w.type === 2) {
+      const splitX = w.x + w.firstHalfWidth;
+      const bufferPx = Math.max(w.wordWidth * 0.2, 20);
+      if (Math.abs(crossX - splitX) < bufferPx) {
+        sliceWord2(w);
+        words.splice(i, 1);
+      }
+    } else if (w.type === 3) {
+      const bufferPx = Math.max(w.wordWidth * 0.15, 20);
+
+      if (w.sliceState === 'full') {
+        const split1X = w.x + w.sylWidths[0];
+        const split2X = w.x + w.sylWidths[0] + w.sylWidths[1];
+        const dist1 = Math.abs(crossX - split1X);
+        const dist2 = Math.abs(crossX - split2X);
+
+        if (dist1 < bufferPx && dist1 <= dist2) {
+          if (sliceWord3(w, 'left')) words.splice(i, 1);
+        } else if (dist2 < bufferPx) {
+          if (sliceWord3(w, 'right')) words.splice(i, 1);
+        }
+      } else {
+        let splitX;
+        if (w.sliceState === 'no-left') {
+          splitX = w.x + w.sylWidths[1];
+        } else {
+          splitX = w.x + w.sylWidths[0];
+        }
+        if (Math.abs(crossX - splitX) < bufferPx) {
+          if (sliceWord3(w, w.sliceState === 'no-left' ? 'right' : 'left'))
+            words.splice(i, 1);
+        }
+      }
+    }
+  }
+}
+
+function interpolateX(x1, y1, x2, y2, targetY) {
+  if (Math.abs(y2 - y1) < 0.001) return (x1 + x2) / 2;
+  const t = (targetY - y1) / (y2 - y1);
+  if (t < -0.5 || t > 1.5) return null;
+  return x1 + t * (x2 - x1);
+}
+
+function lineIntersectsRect(x1, y1, x2, y2, rx, ry, rx2, ry2) {
+  const minX = Math.min(x1, x2), maxX = Math.max(x1, x2);
+  const minY = Math.min(y1, y2), maxY = Math.max(y1, y2);
+  return !(maxX < rx || minX > rx2 || maxY < ry || minY > ry2);
+}
+
+// Drawing
+function drawBackground() {
+  const grad = ctx.createLinearGradient(0, 0, 0, H);
+  grad.addColorStop(0, '#0a0520');
+  grad.addColorStop(0.5, '#1a0a2e');
+  grad.addColorStop(1, '#0d1b2a');
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, W, H);
+}
+
+function drawWord(w) {
+  ctx.save();
+  ctx.globalAlpha = w.alpha;
+  ctx.translate(w.x + w.wordWidth / 2, w.y);
+  ctx.rotate(w.rotation);
+  ctx.font = `bold ${w.fontSize}px 'Segoe UI', Tahoma, sans-serif`;
+  ctx.textBaseline = 'middle';
+  const offsetX = -w.wordWidth / 2;
+
+  const pad = 12;
+  ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
+  roundRect(ctx, offsetX - pad, -w.fontSize * 0.6, w.wordWidth + pad * 2, w.fontSize * 1.2, 8);
+  ctx.fill();
+
+  ctx.fillStyle = '#ffffff';
+  ctx.fillText(w.word, offsetX, 0);
+  ctx.restore();
+}
+
+function drawSlicedPart(p) {
+  ctx.save();
+  ctx.globalAlpha = p.alpha;
+  ctx.translate(p.x, p.y);
+  ctx.rotate(p.rotation);
+  ctx.font = `bold ${p.fontSize}px 'Segoe UI', Tahoma, sans-serif`;
+  ctx.textBaseline = 'middle';
+  ctx.fillStyle = p.color;
+  ctx.shadowColor = p.color;
+  ctx.shadowBlur = 10;
+  ctx.fillText(p.text, 0, 0);
+  ctx.restore();
+}
+
+function drawParticles() {
+  for (const p of particles) {
+    ctx.save();
+    ctx.globalAlpha = p.life;
+    ctx.fillStyle = p.color;
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  }
+}
+
+function drawSlashTrail() {
+  if (slashTrail.length < 2) return;
+  ctx.save();
+
+  // Layer 1: Wide outer glow (deep blue)
+  for (let i = 1; i < slashTrail.length; i++) {
+    const prev = slashTrail[i - 1];
+    const curr = slashTrail[i];
+    const a = curr.life;
+    ctx.strokeStyle = `rgba(40, 100, 255, ${a * 0.25})`;
+    ctx.lineWidth = a * 30;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    ctx.beginPath();
+    ctx.moveTo(prev.x, prev.y);
+    ctx.lineTo(curr.x, curr.y);
+    ctx.stroke();
+  }
+
+  // Layer 2: Mid glow (lighter blue)
+  for (let i = 1; i < slashTrail.length; i++) {
+    const prev = slashTrail[i - 1];
+    const curr = slashTrail[i];
+    const a = curr.life;
+    ctx.strokeStyle = `rgba(120, 170, 255, ${a * 0.45})`;
+    ctx.lineWidth = a * 18;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    ctx.beginPath();
+    ctx.moveTo(prev.x, prev.y);
+    ctx.lineTo(curr.x, curr.y);
+    ctx.stroke();
+  }
+
+  // Layer 3: Bright core (cyan-white)
+  for (let i = 1; i < slashTrail.length; i++) {
+    const prev = slashTrail[i - 1];
+    const curr = slashTrail[i];
+    const a = curr.life;
+    ctx.strokeStyle = `rgba(200, 230, 255, ${a * 0.85})`;
+    ctx.lineWidth = a * 7;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    ctx.beginPath();
+    ctx.moveTo(prev.x, prev.y);
+    ctx.lineTo(curr.x, curr.y);
+    ctx.stroke();
+  }
+
+  // Layer 4: Sharp white center line
+  for (let i = 1; i < slashTrail.length; i++) {
+    const prev = slashTrail[i - 1];
+    const curr = slashTrail[i];
+    const a = curr.life;
+    ctx.strokeStyle = `rgba(255, 255, 255, ${a})`;
+    ctx.lineWidth = a * 2.5;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    ctx.beginPath();
+    ctx.moveTo(prev.x, prev.y);
+    ctx.lineTo(curr.x, curr.y);
+    ctx.stroke();
+  }
+
+  ctx.restore();
+}
+
+function roundRect(ctx, x, y, w, h, r) {
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.lineTo(x + w - r, y);
+  ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+  ctx.lineTo(x + w, y + h - r);
+  ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+  ctx.lineTo(x + r, y + h);
+  ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+  ctx.lineTo(x, y + r);
+  ctx.quadraticCurveTo(x, y, x + r, y);
+  ctx.closePath();
+}
+
+function announceLevel() {
+  const sylType = currentSyllableCount();
+  levelAnnounceEl.textContent = `Level ${level}\n${sylType}-Syllable Words`;
+  levelAnnounceEl.style.opacity = 1;
+  levelTransition = true;
+  levelAnnounceTimer = 2000;
+}
+
+// Game loop
+function update(dt) {
+  if (levelTransition) {
+    levelAnnounceTimer -= dt;
+    if (levelAnnounceTimer <= 0) {
+      levelTransition = false;
+      levelAnnounceEl.style.opacity = 0;
+      wordsSpawnedThisLevel = 0;
+    }
+  }
+
+  if (!levelTransition) {
+    spawnTimer += dt;
+    if (spawnTimer > getSpawnInterval()) {
+      spawnWord();
+      spawnTimer = 0;
+    }
+
+    if (wordsSpawnedThisLevel >= wordsPerLevel && words.length === 0) {
+      level++;
+      updateUI();
+      announceLevel();
+    }
+  }
+
+  const ts = dt / 16.67;
+  for (let i = words.length - 1; i >= 0; i--) {
+    const w = words[i];
+    w.x += w.vx * ts;
+    w.vy += w.gravity * ts;
+    w.y += w.vy * ts;
+    w.rotation += w.rotationSpeed * ts;
+
+    if (w.x < 0) { w.x = 0; w.vx = Math.abs(w.vx) * 0.5; }
+    if (w.x + w.wordWidth > W) { w.x = W - w.wordWidth; w.vx = -Math.abs(w.vx) * 0.5; }
+
+    if (w.y > H - w.fontSize * 0.5 && w.vy > 0) {
+      words.splice(i, 1);
+      missWord();
+    }
+  }
+
+  for (let i = slicedParts.length - 1; i >= 0; i--) {
+    const p = slicedParts[i];
+    p.x += p.vx * ts;
+    p.vy += p.gravity * ts;
+    p.y += p.vy * ts;
+    p.rotation += p.rotationSpeed * ts;
+    p.alpha -= 0.008 * ts;
+    if (p.alpha <= 0 || p.y > H + 100) slicedParts.splice(i, 1);
+  }
+
+  for (let i = particles.length - 1; i >= 0; i--) {
+    const p = particles[i];
+    p.x += p.vx * ts;
+    p.y += p.vy * ts;
+    p.vy += 0.1 * ts;
+    p.life -= p.decay * ts;
+    if (p.life <= 0) particles.splice(i, 1);
+  }
+
+  for (let i = slashTrail.length - 1; i >= 0; i--) {
+    slashTrail[i].life -= 0.06 * ts;
+    if (slashTrail[i].life <= 0) slashTrail.splice(i, 1);
+  }
+}
+
+function draw() {
+  drawBackground();
+  drawSlashTrail();
+  for (const w of words) drawWord(w);
+  for (const p of slicedParts) drawSlicedPart(p);
+  drawParticles();
+}
+
+function gameLoop(timestamp) {
+  if (!gameRunning) return;
+  const dt = lastTime ? timestamp - lastTime : 16;
+  lastTime = timestamp;
+  update(dt);
+  draw();
+  animFrame = requestAnimationFrame(gameLoop);
+}
+
+function startGame() {
+  score = 0;
+  lives = 3;
+  combo = 0;
+  level = 1;
+  wordsSpawnedThisLevel = 0;
+  words = [];
+  slicedParts = [];
+  particles = [];
+  slashTrail = [];
+  spawnTimer = 0;
+  lastTime = 0;
+  gameRunning = true;
+  levelTransition = false;
+  updateUI();
+  startScreen.style.display = 'none';
+  gameOverScreen.style.display = 'none';
+  announceLevel();
+  animFrame = requestAnimationFrame(gameLoop);
+}
+
+function endGame() {
+  gameRunning = false;
+  if (animFrame) cancelAnimationFrame(animFrame);
+  finalScoreEl.textContent = score;
+  gameOverScreen.style.display = 'flex';
+}
+
+function getPointerPos(e) {
+  const touch = e.touches ? e.touches[0] : e;
+  return { x: touch.clientX, y: touch.clientY };
+}
+
+canvas.addEventListener('mousedown', (e) => {
+  if (!gameRunning) return;
+  isPointerDown = true;
+  pointerPath = [getPointerPos(e)];
+});
+
+canvas.addEventListener('mousemove', (e) => {
+  if (!isPointerDown || !gameRunning) return;
+  const pos = getPointerPos(e);
+  pointerPath.push(pos);
+  slashTrail.push({ x: pos.x, y: pos.y, life: 1 });
+  if (pointerPath.length >= 2) {
+    const prev = pointerPath[pointerPath.length - 2];
+    checkSlice(prev.x, prev.y, pos.x, pos.y);
+  }
+});
+
+canvas.addEventListener('mouseup', () => {
+  isPointerDown = false;
+  pointerPath = [];
+});
+
+canvas.addEventListener('touchstart', (e) => {
+  e.preventDefault();
+  if (!gameRunning) return;
+  isPointerDown = true;
+  pointerPath = [getPointerPos(e)];
+}, { passive: false });
+
+canvas.addEventListener('touchmove', (e) => {
+  e.preventDefault();
+  if (!isPointerDown || !gameRunning) return;
+  const pos = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+  pointerPath.push(pos);
+  slashTrail.push({ x: pos.x, y: pos.y, life: 1 });
+  if (pointerPath.length >= 2) {
+    const prev = pointerPath[pointerPath.length - 2];
+    checkSlice(prev.x, prev.y, pos.x, pos.y);
+  }
+}, { passive: false });
+
+canvas.addEventListener('touchend', (e) => {
+  e.preventDefault();
+  isPointerDown = false;
+  pointerPath = [];
+}, { passive: false });
+
+document.getElementById('start-btn').addEventListener('click', startGame);
+document.getElementById('restart-btn').addEventListener('click', startGame);
+
+drawBackground();
+</script>
+</body>
+</html>
