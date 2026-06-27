@@ -110,6 +110,11 @@ canvas {
 
 #game-over-screen { display: none; }
 
+#how-to-screen {
+  z-index: 30;
+  display: none;
+}
+
 .menu {
   width: min(560px, 100%);
   border: 1px solid rgba(255, 255, 255, 0.48);
@@ -143,6 +148,14 @@ h1 {
   font-size: clamp(22px, 6vw, 34px);
   font-weight: 900;
   line-height: 1.25;
+}
+
+.how-to-copy {
+  margin: 18px 0 20px;
+  color: #243648;
+  font-size: clamp(17px, 3.8vw, 21px);
+  font-weight: 800;
+  line-height: 1.35;
 }
 
 .level-selector {
@@ -255,6 +268,16 @@ h1 {
   </div>
 </div>
 
+<div id="how-to-screen" class="screen" role="dialog" aria-modal="true" aria-labelledby="how-to-title">
+  <div class="menu">
+    <h1 id="how-to-title">How to Play</h1>
+    <div class="how-to-copy">
+      Slice each Thai phrase at real word breaks before the next break reaches the end of the belt. Good slices drop into the box. A missed phrase costs one heart.
+    </div>
+    <button class="btn" id="how-to-dismiss-btn" type="button">Got it</button>
+  </div>
+</div>
+
 <div id="game-over-screen" class="screen">
   <div class="menu">
     <h1>จบเกม</h1>
@@ -279,11 +302,13 @@ const livesEl = document.getElementById("lives-display");
 const comboEl = document.getElementById("combo-display");
 const modeEl = document.getElementById("mode-display");
 const startScreen = document.getElementById("start-screen");
+const howToScreen = document.getElementById("how-to-screen");
 const gameOverScreen = document.getElementById("game-over-screen");
 const finalScoreEl = document.getElementById("final-score");
 const levelButtons = Array.from(document.querySelectorAll(".level-btn"));
 
 const THAI_FONT = '"Noto Sans Thai", "Leelawadee UI", Tahoma, sans-serif';
+const HOW_TO_COOKIE = "word_slice_how_to_seen";
 const LEVEL_CONFIG = {
   easy: {
     label: "Easy",
@@ -348,6 +373,7 @@ let spawnTimer = 0;
 let lastTime = 0;
 let animFrame = null;
 let conveyorOffset = 0;
+let conveyorTravel = 0;
 let itemSequence = 0;
 let isPointerDown = false;
 let pointerPath = [];
@@ -362,6 +388,27 @@ function lerp(a, b, t) {
 
 function randomInt(min, max) {
   return Math.floor(min + Math.random() * (max - min + 1));
+}
+
+function hasCookie(name) {
+  return document.cookie.split(";").some((entry) => {
+    return entry.trim().startsWith(`${encodeURIComponent(name)}=`);
+  });
+}
+
+function setCookie(name, value, maxAgeSeconds) {
+  document.cookie = `${encodeURIComponent(name)}=${encodeURIComponent(value)}; max-age=${maxAgeSeconds}; path=/; SameSite=Lax`;
+}
+
+function showHowToSplash() {
+  if (!hasCookie(HOW_TO_COOKIE)) {
+    howToScreen.style.display = "flex";
+  }
+}
+
+function dismissHowToSplash() {
+  setCookie(HOW_TO_COOKIE, "1", 60 * 60 * 24 * 365);
+  howToScreen.style.display = "none";
 }
 
 function thaiFont(size, weight = 900) {
@@ -391,6 +438,7 @@ function getSceneMetrics() {
   const beltHeight = clamp(H * 0.115, 64, 106);
   const beltTop = beltY - beltHeight / 2;
   const beltBottom = beltY + beltHeight / 2;
+  const beltEndX = Math.round(W * 0.05);
   const boxWidth = clamp(W * 0.34, 178, 310);
   const boxHeight = clamp(H * 0.16, 86, 132);
   const boxX = W / 2 - boxWidth / 2;
@@ -401,6 +449,7 @@ function getSceneMetrics() {
     beltHeight,
     beltTop,
     beltBottom,
+    beltEndX,
     boxX,
     boxY,
     boxWidth,
@@ -687,6 +736,29 @@ function addFragment(text, x, y, side, fontSize) {
   });
 }
 
+function addMissedPhrase(item, boundaryX) {
+  const rect = getItemRect(item);
+  const side = boundaryX <= scene.beltEndX ? -1 : 1;
+
+  fallingFragments.push({
+    text: item.text,
+    x: rect.left,
+    y: rect.top,
+    vx: -48 - Math.random() * 34,
+    vy: -42 - Math.random() * 34,
+    gravity: 900 + Math.random() * 100,
+    fontSize: item.fontSize,
+    rotation: side * 0.08,
+    rotationSpeed: side * (1.05 + Math.random() * 0.55),
+    alpha: 1,
+    color: "#111827",
+    width: item.width,
+    height: item.height,
+    padding: item.padding,
+    missed: true
+  });
+}
+
 function addSliceParticles(x, y, color, count) {
   for (let i = 0; i < count; i++) {
     particles.push({
@@ -741,10 +813,10 @@ function registerWrongSlice(item, x) {
   updateUI();
 }
 
-function missItem() {
+function missItem(x = scene.beltEndX, y = scene.beltY) {
   lives -= 1;
   combo = 0;
-  addSliceParticles(W * 0.08, scene.beltY, "#ef476f", 10);
+  addSliceParticles(x, y, "#ef476f", 10);
   updateUI();
 
   if (lives <= 0) {
@@ -796,7 +868,8 @@ function lineIntersectsRect(x1, y1, x2, y2, rx1, ry1, rx2, ry2) {
 function update(dt) {
   const seconds = dt / 1000;
   runTime += dt;
-  conveyorOffset = (conveyorOffset + getCurrentSpeed() * seconds) % 52;
+  conveyorTravel += getCurrentSpeed() * seconds;
+  conveyorOffset = conveyorTravel % 52;
   spawnTimer += dt;
 
   if (spawnTimer >= getCurrentSpawnInterval() && canSpawnNextItem()) {
@@ -810,9 +883,11 @@ function update(dt) {
     item.x -= item.speed * seconds;
     item.flash = Math.max(0, item.flash - seconds * 4.4);
 
-    if (item.x + item.width < -30) {
+    const firstBoundaryX = getBoundaryXs(item)[0] ?? item.x + item.width;
+    if (firstBoundaryX <= scene.beltEndX) {
+      addMissedPhrase(item, firstBoundaryX);
       activeItems.splice(i, 1);
-      missItem();
+      missItem(firstBoundaryX, item.y);
     }
   }
 
@@ -822,6 +897,13 @@ function update(dt) {
     fragment.vy += fragment.gravity * seconds;
     fragment.y += fragment.vy * seconds;
     fragment.rotation += fragment.rotationSpeed * seconds;
+
+    if (fragment.missed) {
+      if (fragment.y > H + fragment.height + 120) {
+        fallingFragments.splice(i, 1);
+      }
+      continue;
+    }
 
     const landingY = scene.boxY + scene.boxHeight * 0.28 + Math.random() * 4;
     if (!fragment.landed && fragment.y >= landingY) {
@@ -940,8 +1022,8 @@ function drawFactoryDetails() {
 }
 
 function drawConveyor() {
-  const beltX = -20;
-  const beltW = W + 40;
+  const beltX = scene.beltEndX;
+  const beltW = W + 40 - beltX;
   const beltH = scene.beltHeight;
   const beltY = scene.beltTop;
 
@@ -953,35 +1035,82 @@ function drawConveyor() {
   roundRect(ctx, beltX, beltY, beltW, beltH, 8);
   ctx.fill();
 
+  ctx.save();
+  roundRect(ctx, beltX, beltY, beltW, beltH, 8);
+  ctx.clip();
+
   ctx.fillStyle = "#3f4c58";
   ctx.fillRect(beltX, scene.beltY - beltH * 0.18, beltW, beltH * 0.36);
 
   ctx.strokeStyle = "#9aa6b2";
   ctx.lineWidth = 5;
-  for (let x = -80 - conveyorOffset; x < W + 80; x += 52) {
+  for (let x = beltX - 80 - conveyorOffset; x < W + 80; x += 52) {
     ctx.beginPath();
     ctx.moveTo(x, beltY + 9);
     ctx.lineTo(x + 26, beltY + beltH - 9);
     ctx.stroke();
   }
+  ctx.restore();
 
-  for (let x = 24; x < W + 80; x += 148) {
-    drawRoller(x, scene.beltY, beltH * 0.34);
+  for (let x = beltX + 28; x < W + 80; x += 148) {
+    drawGear(x, scene.beltY, beltH * 0.34);
   }
 
   ctx.fillStyle = "#202a33";
-  ctx.fillRect(0, scene.beltBottom - 8, W, 16);
+  ctx.fillRect(beltX, scene.beltBottom - 8, beltW, 16);
 }
 
-function drawRoller(x, y, r) {
+function drawGear(x, y, r) {
+  const teeth = 12;
+  const outerR = r * 1.18;
+  const rootR = r * 0.92;
+  const rotation = -conveyorTravel / Math.max(1, r);
+
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.rotate(rotation);
+
   ctx.fillStyle = "#18212a";
+  ctx.strokeStyle = "#d6dde5";
+  ctx.lineWidth = 2;
   ctx.beginPath();
-  ctx.arc(x, y, r, 0, Math.PI * 2);
+  for (let i = 0; i < teeth * 2; i++) {
+    const angle = (i / (teeth * 2)) * Math.PI * 2;
+    const radius = i % 2 === 0 ? outerR : rootR;
+    const px = Math.cos(angle) * radius;
+    const py = Math.sin(angle) * radius;
+    if (i === 0) {
+      ctx.moveTo(px, py);
+    } else {
+      ctx.lineTo(px, py);
+    }
+  }
+  ctx.closePath();
   ctx.fill();
+  ctx.stroke();
+
+  ctx.strokeStyle = "#9aa6b2";
+  ctx.lineWidth = Math.max(3, r * 0.14);
+  ctx.lineCap = "round";
+  for (let i = 0; i < 6; i++) {
+    const angle = (i / 6) * Math.PI * 2;
+    ctx.beginPath();
+    ctx.moveTo(Math.cos(angle) * r * 0.34, Math.sin(angle) * r * 0.34);
+    ctx.lineTo(Math.cos(angle) * r * 0.72, Math.sin(angle) * r * 0.72);
+    ctx.stroke();
+  }
+
   ctx.fillStyle = "#d6dde5";
   ctx.beginPath();
-  ctx.arc(x, y, r * 0.48, 0, Math.PI * 2);
+  ctx.arc(0, 0, r * 0.36, 0, Math.PI * 2);
   ctx.fill();
+
+  ctx.fillStyle = "#18212a";
+  ctx.beginPath();
+  ctx.arc(0, 0, r * 0.15, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.restore();
 }
 
 function drawItems() {
@@ -1023,14 +1152,37 @@ function drawFragments() {
   for (const fragment of fallingFragments) {
     ctx.save();
     ctx.globalAlpha = fragment.alpha;
-    ctx.translate(fragment.x, fragment.y);
-    ctx.rotate(fragment.rotation);
-    ctx.font = thaiFont(fragment.fontSize);
-    ctx.textBaseline = "middle";
-    ctx.fillStyle = fragment.color;
-    ctx.shadowColor = "rgba(15, 23, 42, 0.28)";
-    ctx.shadowBlur = 8;
-    ctx.fillText(fragment.text, 0, 0);
+    if (fragment.missed) {
+      ctx.translate(fragment.x + fragment.width / 2, fragment.y + fragment.height / 2);
+      ctx.rotate(fragment.rotation);
+
+      ctx.fillStyle = "rgba(19, 31, 43, 0.26)";
+      roundRect(ctx, -fragment.width / 2 + 5, -fragment.height / 2 + 7, fragment.width, fragment.height, 8);
+      ctx.fill();
+
+      ctx.fillStyle = "#fffaf0";
+      roundRect(ctx, -fragment.width / 2, -fragment.height / 2, fragment.width, fragment.height, 8);
+      ctx.fill();
+
+      ctx.strokeStyle = "#ef476f";
+      ctx.lineWidth = 3;
+      roundRect(ctx, -fragment.width / 2, -fragment.height / 2, fragment.width, fragment.height, 8);
+      ctx.stroke();
+
+      ctx.font = thaiFont(fragment.fontSize);
+      ctx.textBaseline = "middle";
+      ctx.fillStyle = fragment.color;
+      ctx.fillText(fragment.text, -fragment.width / 2 + fragment.padding, 1);
+    } else {
+      ctx.translate(fragment.x, fragment.y);
+      ctx.rotate(fragment.rotation);
+      ctx.font = thaiFont(fragment.fontSize);
+      ctx.textBaseline = "middle";
+      ctx.fillStyle = fragment.color;
+      ctx.shadowColor = "rgba(15, 23, 42, 0.28)";
+      ctx.shadowBlur = 8;
+      ctx.fillText(fragment.text, 0, 0);
+    }
     ctx.restore();
   }
 }
@@ -1176,6 +1328,8 @@ function startGame() {
   slashTrail = [];
   spawnTimer = 900;
   lastTime = 0;
+  conveyorTravel = 0;
+  conveyorOffset = 0;
   itemSequence = 0;
   gameRunning = true;
   updateUI();
@@ -1244,8 +1398,10 @@ for (const button of levelButtons) {
 
 document.getElementById("start-btn").addEventListener("click", startGame);
 document.getElementById("restart-btn").addEventListener("click", startGame);
+document.getElementById("how-to-dismiss-btn").addEventListener("click", dismissHowToSplash);
 window.addEventListener("resize", resize);
 
+showHowToSplash();
 updateUI();
 resize();
 </script>
