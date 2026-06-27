@@ -884,11 +884,17 @@ function getSceneMetrics() {
   const conveyorLength = getVisibleConveyorLength(W);
   const bucketWidth = clamp(W * 0.16, 78, 132);
   const bucketHeight = clamp(H * 0.09, 48, 76);
-  const bucketY = Math.max(H * 0.28, beltTop - bucketHeight - clamp(H * 0.045, 24, 48));
+  const shouldLiftBuckets = W < 720;
+  const bucketGap = shouldLiftBuckets ? clamp(H * 0.085, 58, 86) : clamp(H * 0.045, 24, 48);
+  const itemLaneY = beltY - beltHeight * 0.72;
+  const itemHeight = clamp(baseFontSize() * 1.42, 50, 78);
+  const bucketYFromBelt = beltTop - bucketHeight - bucketGap;
+  const bucketYFromItemLane = itemLaneY - itemHeight / 2 - bucketHeight - clamp(H * 0.022, 16, 26);
+  const bucketY = Math.max(H * 0.28, shouldLiftBuckets ? Math.min(bucketYFromBelt, bucketYFromItemLane) : bucketYFromBelt);
   const bucketCenters = W < 560 ? [0.27, 0.55, 0.83] : [0.22, 0.46, 0.7, 0.9];
   const buckets = bucketCenters.map((center, index) => ({
     x: clamp(W * center - bucketWidth / 2, beltEndX + 8, W - bucketWidth - 10),
-    y: bucketY + (index % 2) * bucketHeight * 0.16,
+    y: bucketY,
     width: bucketWidth,
     height: bucketHeight,
     color: ["#118ab2", "#24a66a", "#fcbf49", "#ef476f"][index % 4]
