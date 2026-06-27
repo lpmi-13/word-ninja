@@ -110,6 +110,11 @@ canvas {
   .stage-meter-fill {
     transition: none;
   }
+
+  .loader-belt::before,
+  .loader-tile {
+    animation: none;
+  }
 }
 
 .hud-icon-button {
@@ -154,6 +159,11 @@ canvas {
 }
 
 #game-over-screen { display: none; }
+
+#loading-screen {
+  z-index: 40;
+  display: none;
+}
 
 #how-to-screen {
   z-index: 30;
@@ -318,12 +328,102 @@ h1 {
   box-shadow: 0 10px 20px rgba(239, 71, 111, 0.26);
 }
 
+.btn:disabled,
+.level-btn:disabled {
+  cursor: wait;
+  opacity: 0.66;
+}
+
 .btn:focus-visible,
 .level-btn:focus-visible,
 .stage-btn:focus-visible,
 .hud-icon-button:focus-visible {
   outline: 4px solid rgba(17, 138, 178, 0.35);
   outline-offset: 2px;
+}
+
+.loading-title {
+  color: #16202a;
+  font-size: clamp(28px, 7vw, 44px);
+  font-weight: 900;
+  line-height: 1.05;
+}
+
+.loading-copy {
+  margin-top: 8px;
+  color: #37515e;
+  font-size: clamp(16px, 3.8vw, 20px);
+  font-weight: 800;
+}
+
+.loader-belt {
+  position: relative;
+  height: 104px;
+  margin: 22px 0;
+  border: 4px solid #17212b;
+  border-radius: 8px;
+  overflow: hidden;
+  background: #2f3b46;
+  box-shadow: inset 0 0 0 8px rgba(255, 255, 255, 0.06);
+}
+
+.loader-belt::before {
+  content: "";
+  position: absolute;
+  inset: 26px -60px 24px;
+  background: repeating-linear-gradient(
+    115deg,
+    #9aa6b2 0 12px,
+    #3f4c58 12px 42px
+  );
+  animation: loader-belt-travel 0.72s linear infinite;
+}
+
+.loader-tile {
+  position: absolute;
+  top: 26px;
+  min-width: 62px;
+  height: 48px;
+  border: 3px solid #17212b;
+  border-radius: 8px;
+  background: #fffaf0;
+  color: #111827;
+  font-size: 26px;
+  font-weight: 900;
+  line-height: 42px;
+  text-align: center;
+  box-shadow: 4px 5px 0 rgba(15, 23, 42, 0.22);
+  animation: loader-tile-travel 1.72s linear infinite;
+}
+
+.loader-tile:nth-child(1) { animation-delay: -1.15s; }
+.loader-tile:nth-child(2) { animation-delay: -0.58s; }
+.loader-tile:nth-child(3) { animation-delay: 0s; }
+
+.loading-error {
+  min-height: 20px;
+  margin-bottom: 14px;
+  color: #b4233f;
+  font-size: 14px;
+  font-weight: 800;
+}
+
+#loading-dismiss-btn {
+  display: none;
+}
+
+#loading-screen.has-error #loading-dismiss-btn {
+  display: block;
+}
+
+@keyframes loader-belt-travel {
+  from { transform: translateX(0); }
+  to { transform: translateX(-52px); }
+}
+
+@keyframes loader-tile-travel {
+  from { transform: translateX(580px); }
+  to { transform: translateX(-150px); }
 }
 
 #final-label {
@@ -398,6 +498,20 @@ h1 {
   </div>
 </div>
 
+<div id="loading-screen" class="screen" role="status" aria-live="polite" aria-label="Loading game data">
+  <div class="menu">
+    <div class="loading-title">Loading word factory</div>
+    <div class="loading-copy" id="loading-message">Warming up the conveyor...</div>
+    <div class="loader-belt" aria-hidden="true">
+      <div class="loader-tile" lang="th">คำ</div>
+      <div class="loader-tile" lang="th">ไทย</div>
+      <div class="loader-tile" lang="th">หั่น</div>
+    </div>
+    <div class="loading-error" id="loading-error"></div>
+    <button class="btn" id="loading-dismiss-btn" type="button">Back</button>
+  </div>
+</div>
+
 <div id="how-to-screen" class="screen" role="dialog" aria-modal="true" aria-labelledby="how-to-title">
   <div class="menu">
     <h1 id="how-to-title">How to Play</h1>
@@ -417,13 +531,8 @@ h1 {
   </div>
 </div>
 
-<script src="content/thai-game-data.js"></script>
 <script>
-const corpus = window.THAI_GAME_DATA;
-if (!corpus || !Array.isArray(corpus.entries)) {
-  throw new Error("Thai game data is missing. Run scripts/build-thai-game-data.mjs.");
-}
-
+const GAME_DATA_SRC = "content/thai-game-data.js";
 const canvas = document.getElementById("game-canvas");
 const ctx = canvas.getContext("2d");
 
@@ -438,6 +547,13 @@ const startScreen = document.getElementById("start-screen");
 const howToScreen = document.getElementById("how-to-screen");
 const gameOverScreen = document.getElementById("game-over-screen");
 const finalScoreEl = document.getElementById("final-score");
+const startButton = document.getElementById("start-btn");
+const restartButton = document.getElementById("restart-btn");
+const howToDismissButton = document.getElementById("how-to-dismiss-btn");
+const loadingScreen = document.getElementById("loading-screen");
+const loadingMessageEl = document.getElementById("loading-message");
+const loadingErrorEl = document.getElementById("loading-error");
+const loadingDismissButton = document.getElementById("loading-dismiss-btn");
 const levelButtons = Array.from(document.querySelectorAll(".level-btn"));
 
 const THAI_FONT = '"Noto Sans Thai", "Leelawadee UI", Tahoma, sans-serif';
@@ -445,6 +561,9 @@ const HOW_TO_COOKIE = "word_slice_how_to_seen";
 const PROGRESS_STORAGE_KEY = "word_slice_curriculum_progress_v1";
 const NEXT_PHRASE_DELAY = 520;
 const MOBILE_SPEED_REFERENCE_WIDTH = 1280;
+const LOADING_REVEAL_DELAY = 180;
+const START_BUTTON_LABEL = startButton.textContent;
+const RESTART_BUTTON_LABEL = restartButton.textContent;
 const reducedMotionQuery = typeof window.matchMedia === "function"
   ? window.matchMedia("(prefers-reduced-motion: reduce)")
   : null;
@@ -631,12 +750,9 @@ const CELEBRATION_DURATIONS = {
   level: 3400
 };
 
-const entriesByLevel = corpus.entries.reduce((groups, entry) => {
-  groups[entry.level] ??= [];
-  groups[entry.level].push(entry);
-  return groups;
-}, {});
-
+let corpus = null;
+let entriesByLevel = {};
+let corpusLoadPromise = null;
 let W = 0;
 let H = 0;
 let dpr = 1;
@@ -700,6 +816,168 @@ function easeOutBack(t) {
 
 function randomInt(min, max) {
   return Math.floor(min + Math.random() * (max - min + 1));
+}
+
+function normalizeGameData(rawData) {
+  if (!rawData || !Array.isArray(rawData.entries)) {
+    throw new Error("Thai game data is missing or malformed.");
+  }
+
+  const entries = rawData.entries.map((entry, index) => {
+    const normalized = Array.isArray(entry)
+      ? {
+        id: entry[0],
+        level: entry[1],
+        sublevel: entry[2],
+        tokens: entry[3],
+        gloss: entry[4],
+        vocabularyTags: entry[5] ?? []
+      }
+      : {
+        id: entry.id,
+        level: entry.level,
+        sublevel: entry.sublevel,
+        tokens: entry.tokens,
+        gloss: entry.gloss,
+        vocabularyTags: entry.vocabularyTags ?? []
+      };
+
+    if (
+      typeof normalized.id !== "string"
+      || typeof normalized.level !== "string"
+      || typeof normalized.sublevel !== "string"
+      || !Array.isArray(normalized.tokens)
+      || normalized.tokens.length < 2
+    ) {
+      throw new Error(`Thai game data entry ${index + 1} is malformed.`);
+    }
+
+    normalized.vocabularyTags = Array.isArray(normalized.vocabularyTags)
+      ? normalized.vocabularyTags
+      : [];
+
+    return normalized;
+  });
+
+  return {
+    version: rawData.version ?? 1,
+    language: rawData.language ?? "th",
+    entries
+  };
+}
+
+function indexEntriesByLevel(entries) {
+  return entries.reduce((groups, entry) => {
+    groups[entry.level] ??= [];
+    groups[entry.level].push(entry);
+    return groups;
+  }, {});
+}
+
+function installGameData(rawData) {
+  corpus = normalizeGameData(rawData);
+  entriesByLevel = indexEntriesByLevel(corpus.entries);
+  window.THAI_GAME_DATA = undefined;
+  return corpus;
+}
+
+function loadGameData() {
+  if (corpus) return Promise.resolve(corpus);
+  if (corpusLoadPromise) return corpusLoadPromise;
+
+  corpusLoadPromise = new Promise((resolve, reject) => {
+    if (window.THAI_GAME_DATA) {
+      try {
+        resolve(installGameData(window.THAI_GAME_DATA));
+      } catch (error) {
+        reject(error);
+      }
+      return;
+    }
+
+    const script = document.createElement("script");
+    script.src = GAME_DATA_SRC;
+    script.async = true;
+    script.onload = () => {
+      try {
+        resolve(installGameData(window.THAI_GAME_DATA));
+      } catch (error) {
+        reject(error);
+      } finally {
+        script.remove();
+      }
+    };
+    script.onerror = () => {
+      script.remove();
+      reject(new Error(`Unable to load ${GAME_DATA_SRC}.`));
+    };
+    document.head.append(script);
+  }).catch((error) => {
+    corpusLoadPromise = null;
+    throw error;
+  });
+
+  return corpusLoadPromise;
+}
+
+function preloadGameDataSoon() {
+  const requestLoad = () => {
+    loadGameData().catch((error) => {
+      console.warn("Thai game data preload failed.", error);
+    });
+  };
+
+  if (typeof window.requestIdleCallback === "function") {
+    window.requestIdleCallback(requestLoad, { timeout: 2200 });
+  } else {
+    window.setTimeout(requestLoad, 850);
+  }
+}
+
+function setGameButtonsDisabled(disabled) {
+  startButton.disabled = disabled;
+  restartButton.disabled = disabled;
+  startButton.textContent = disabled ? "Loading..." : START_BUTTON_LABEL;
+  restartButton.textContent = disabled ? "Loading..." : RESTART_BUTTON_LABEL;
+}
+
+function showDataLoading() {
+  loadingScreen.classList.remove("has-error");
+  loadingMessageEl.textContent = "Warming up the conveyor...";
+  loadingErrorEl.textContent = "";
+  loadingScreen.style.display = "flex";
+}
+
+function hideDataLoading() {
+  loadingScreen.classList.remove("has-error");
+  loadingScreen.style.display = "none";
+}
+
+function showDataLoadError(error) {
+  console.error(error);
+  loadingMessageEl.textContent = "Word data could not load";
+  loadingErrorEl.textContent = "Check that content/thai-game-data.js exists, then try again.";
+  loadingScreen.classList.add("has-error");
+  loadingScreen.style.display = "flex";
+}
+
+async function ensureGameDataReady() {
+  if (corpus) return true;
+
+  let revealTimer = window.setTimeout(showDataLoading, LOADING_REVEAL_DELAY);
+  setGameButtonsDisabled(true);
+
+  try {
+    await loadGameData();
+    return true;
+  } catch (error) {
+    showDataLoadError(error);
+    return false;
+  } finally {
+    window.clearTimeout(revealTimer);
+    setGameButtonsDisabled(false);
+    if (corpus) hideDataLoading();
+  }
 }
 
 function getVisibleConveyorLength(width) {
@@ -2532,7 +2810,9 @@ function clearRunState() {
   currentPhrase = null;
 }
 
-function startGame() {
+async function startGame() {
+  if (!(await ensureGameDataReady())) return;
+
   score = 0;
   lives = 3;
   combo = 0;
@@ -2630,9 +2910,10 @@ stageSelectorEl.addEventListener("click", (event) => {
   draw();
 });
 
-document.getElementById("start-btn").addEventListener("click", startGame);
-document.getElementById("restart-btn").addEventListener("click", startGame);
-document.getElementById("how-to-dismiss-btn").addEventListener("click", dismissHowToSplash);
+startButton.addEventListener("click", startGame);
+restartButton.addEventListener("click", startGame);
+howToDismissButton.addEventListener("click", dismissHowToSplash);
+loadingDismissButton.addEventListener("click", hideDataLoading);
 menuButton.addEventListener("click", returnToMenu);
 window.addEventListener("resize", resize);
 reducedMotionQuery?.addEventListener?.("change", (event) => {
@@ -2644,6 +2925,7 @@ reducedMotionQuery?.addEventListener?.("change", (event) => {
 showHowToSplash();
 updateUI();
 resize();
+preloadGameDataSoon();
 </script>
 </body>
 </html>

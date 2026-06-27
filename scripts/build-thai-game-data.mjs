@@ -15,12 +15,6 @@ const LEVEL_RANK = {
   difficult: 2
 };
 
-const CEFR_LIKE_LEVEL = {
-  easy: "A1",
-  medium: "A2",
-  difficult: "B1"
-};
-
 const MAX_REVIEWED_TOKEN_COUNT = {
   easy: 5,
   medium: 7,
@@ -29,18 +23,6 @@ const MAX_REVIEWED_TOKEN_COUNT = {
 
 function readJson(filePath) {
   return JSON.parse(fs.readFileSync(filePath, "utf8"));
-}
-
-function getBoundaryOffsets(tokens) {
-  let offset = 0;
-  const offsets = [];
-
-  for (let i = 0; i < tokens.length - 1; i++) {
-    offset += tokens[i].length;
-    offsets.push(offset);
-  }
-
-  return offsets;
 }
 
 function countBy(items, keyFn) {
@@ -137,31 +119,20 @@ for (const warning of warnings) {
 }
 
 const entries = corpus.entries.map((entry) => {
-  const boundaryOffsets = getBoundaryOffsets(entry.tokens);
-
-  return {
-    id: entry.id,
-    level: entry.level,
-    cefrLikeLevel: CEFR_LIKE_LEVEL[entry.level],
-    sublevel: entry.sublevel,
-    text: entry.text,
-    tokens: entry.tokens,
-    gloss: entry.gloss,
-    vocabularyTags: entry.topics ?? [],
-    boundaryOffsets,
-    boundaryCount: boundaryOffsets.length
-  };
+  return [
+    entry.id,
+    entry.level,
+    entry.sublevel,
+    entry.tokens,
+    entry.gloss,
+    entry.topics ?? []
+  ];
 });
 
 const gameData = {
   version: corpus.version,
   language: corpus.language,
-  counts: {
-    total: entries.length,
-    byLevel: countBy(entries, (entry) => entry.level),
-    bySublevel: countBy(entries, (entry) => entry.sublevel)
-  },
-  levels: corpus.levels,
+  schema: ["id", "level", "sublevel", "tokens", "gloss", "vocabularyTags"],
   entries
 };
 
@@ -170,4 +141,8 @@ fs.writeFileSync(
   `window.THAI_GAME_DATA=${JSON.stringify(gameData)};\n`
 );
 
-console.log(JSON.stringify(gameData.counts, null, 2));
+console.log(JSON.stringify({
+  total: corpus.entries.length,
+  byLevel: countBy(corpus.entries, (entry) => entry.level),
+  bySublevel: countBy(corpus.entries, (entry) => entry.sublevel)
+}, null, 2));

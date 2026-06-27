@@ -16,7 +16,7 @@ The expanded source corpus lives in [content/thai-expanded-corpus.json](content/
 - 220 `medium` entries
 - 130 `difficult` entries
 
-The browser-ready game data lives in [content/thai-game-data.js](content/thai-game-data.js). It is generated from the expanded corpus and includes computed internal token boundary offsets for runtime hit detection.
+The browser-ready game data lives in [content/thai-game-data.js](content/thai-game-data.js). It is generated from the expanded corpus, packed into a compact tuple schema, and loaded on demand after the menu paints.
 
 The corpus has three broad level bands:
 
