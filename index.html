@@ -703,6 +703,59 @@ function getDefaultProgressState() {
   };
 }
 
+function toProgressCount(value) {
+  const number = Number(value);
+  if (!Number.isFinite(number) || number < 0) return 0;
+  return Math.min(999999, Math.floor(number));
+}
+
+function normalizeRecentProgress(value) {
+  if (!Array.isArray(value)) return [];
+  return value.slice(-20).map((entry) => entry ? 1 : 0);
+}
+
+function normalizeStageProgress(value) {
+  const progress = value && typeof value === "object" ? value : {};
+
+  return {
+    seen: toProgressCount(progress.seen),
+    cleared: toProgressCount(progress.cleared),
+    missed: toProgressCount(progress.missed),
+    mastered: progress.mastered === true,
+    recent: normalizeRecentProgress(progress.recent)
+  };
+}
+
+function normalizeProgressState(parsed, fallback) {
+  const currentStageByLevel = { ...fallback.currentStageByLevel };
+  const parsedCurrentStages = parsed.currentStageByLevel && typeof parsed.currentStageByLevel === "object"
+    ? parsed.currentStageByLevel
+    : {};
+
+  for (const level of Object.keys(CURRICULUM)) {
+    const stageId = parsedCurrentStages[level];
+    if (typeof stageId === "string" && getStages(level).some((stage) => stage.id === stageId)) {
+      currentStageByLevel[level] = stageId;
+    }
+  }
+
+  const stages = {};
+  const parsedStages = parsed.stages && typeof parsed.stages === "object" ? parsed.stages : {};
+  for (const level of Object.keys(CURRICULUM)) {
+    for (const stage of getStages(level)) {
+      if (Object.prototype.hasOwnProperty.call(parsedStages, stage.id)) {
+        stages[stage.id] = normalizeStageProgress(parsedStages[stage.id]);
+      }
+    }
+  }
+
+  return {
+    version: 1,
+    currentStageByLevel,
+    stages
+  };
+}
+
 function loadProgressState() {
   const fallback = getDefaultProgressState();
   try {
@@ -710,15 +763,7 @@ function loadProgressState() {
     if (!parsed || parsed.version !== 1 || !parsed.stages || !parsed.currentStageByLevel) {
       return fallback;
     }
-    return {
-      ...fallback,
-      ...parsed,
-      currentStageByLevel: {
-        ...fallback.currentStageByLevel,
-        ...parsed.currentStageByLevel
-      },
-      stages: parsed.stages
-    };
+    return normalizeProgressState(parsed, fallback);
   } catch {
     return fallback;
   }
@@ -925,8 +970,11 @@ function renderLevelButtons() {
     const level = button.dataset.level;
     const cfg = LEVEL_CONFIG[level];
     const completion = Math.round(getLevelCompletion(level) * 100);
+    const detail = document.createElement("span");
+
+    detail.textContent = `${cfg.cefrLikeLevel} ${completion}%`;
     button.classList.toggle("is-active", level === selectedLevel);
-    button.innerHTML = `${cfg.label}<span>${cfg.cefrLikeLevel} ${completion}%</span>`;
+    button.replaceChildren(document.createTextNode(cfg.label), detail);
   }
 }
 
@@ -934,12 +982,18 @@ function renderStageSelector() {
   const stages = getStages(selectedLevel);
   const currentStage = getCurrentStage(selectedLevel);
   const levelCompletion = Math.round(getLevelCompletion(selectedLevel) * 100);
+  const progressLabel = document.createElement("div");
+  const meter = document.createElement("div");
+  const meterFill = document.createElement("div");
 
-  stageOverviewEl.innerHTML = `
-    <div>${LEVEL_CONFIG[selectedLevel].cefrLikeLevel} progress ${levelCompletion}%</div>
-    <div class="stage-meter" aria-hidden="true"><div class="stage-meter-fill" style="width: ${levelCompletion}%"></div></div>
-  `;
-  stageSelectorEl.innerHTML = "";
+  progressLabel.textContent = `${LEVEL_CONFIG[selectedLevel].cefrLikeLevel} progress ${levelCompletion}%`;
+  meter.className = "stage-meter";
+  meter.setAttribute("aria-hidden", "true");
+  meterFill.className = "stage-meter-fill";
+  meterFill.style.width = `${levelCompletion}%`;
+  meter.append(meterFill);
+  stageOverviewEl.replaceChildren(progressLabel, meter);
+  stageSelectorEl.replaceChildren();
 
   stages.forEach((stage, index) => {
     const progress = getStageProgress(stage.id);
@@ -947,6 +1001,8 @@ function renderStageSelector() {
     const unlocked = isStageUnlocked(selectedLevel, index);
     const mastered = isStageMastered(stage);
     const button = document.createElement("button");
+    const label = document.createTextNode(`${stage.id} ${stage.label}`);
+    const detail = document.createElement("span");
 
     button.type = "button";
     button.className = "stage-btn";
@@ -954,7 +1010,8 @@ function renderStageSelector() {
     button.disabled = !unlocked;
     button.classList.toggle("is-active", currentStage?.id === stage.id);
     button.classList.toggle("is-mastered", mastered);
-    button.innerHTML = `${stage.id} ${stage.label}<span>${mastered ? "Mastered" : `${progress.seen}/${stage.targetSeen} ${completion}%`}</span>`;
+    detail.textContent = mastered ? "Mastered" : `${progress.seen}/${stage.targetSeen} ${completion}%`;
+    button.append(label, detail);
     stageSelectorEl.append(button);
   });
 }
