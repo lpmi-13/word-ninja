@@ -649,6 +649,10 @@ function getBoundaryTolerance(item, boundaryIndex, boundaryXs) {
   return clamp(Math.min(fontBased, nearestGap * 0.46), 13, item.fontSize * 0.64);
 }
 
+function getSplitGap(item) {
+  return clamp(item.fontSize * 0.22, 8, 14);
+}
+
 function findNearestBoundary(item, crossX) {
   const boundaryXs = getBoundaryXs(item);
   let best = null;
@@ -664,6 +668,40 @@ function findNearestBoundary(item, crossX) {
   return best;
 }
 
+function addActiveItemAfter(sourceItem, tokens, x) {
+  const item = {
+    id: ++itemSequence,
+    sourceId: sourceItem.sourceId,
+    gloss: sourceItem.gloss,
+    level: sourceItem.level,
+    sublevel: sourceItem.sublevel,
+    fontSize: sourceItem.fontSize,
+    x,
+    y: sourceItem.y,
+    width: 0,
+    height: sourceItem.height,
+    padding: sourceItem.padding,
+    speed: sourceItem.speed,
+    flash: 0,
+    lastWrongAt: 0
+  };
+  updateItemText(item, tokens, x);
+
+  const sourceIndex = activeItems.indexOf(sourceItem);
+  if (sourceIndex === -1) {
+    activeItems.push(item);
+  } else {
+    activeItems.splice(sourceIndex + 1, 0, item);
+  }
+
+  return item;
+}
+
+function bumpItem(item, offset) {
+  item.bump = 1;
+  item.bumpOffset = offset;
+}
+
 function sliceItem(item, boundaryIndex, sliceX) {
   const leftTokens = item.tokens.slice(0, boundaryIndex + 1);
   const rightTokens = item.tokens.slice(boundaryIndex + 1);
@@ -673,28 +711,35 @@ function sliceItem(item, boundaryIndex, sliceX) {
   const textY = item.y;
   const fontSize = item.fontSize;
   const textLeft = item.x + item.padding;
+  const leftStays = leftTokens.length > 1;
+  const rightStays = rightTokens.length > 1;
 
-  if (item.tokens.length === 2) {
+  if (!leftStays) {
     addFragment(leftText, textLeft, textY, -1, fontSize);
-    addFragment(rightText, splitX + 4, textY, 1, fontSize);
-    addSliceParticles(sliceX, textY, "#ffd166", 18);
-    addScorePop(splitX, textY - fontSize * 0.8);
-    awardSliceScore();
-    return true;
   }
 
-  if (rightTokens.length === 1) {
+  if (!rightStays) {
     addFragment(rightText, splitX + 4, textY, 1, fontSize);
+  }
+
+  if (leftStays && rightStays) {
+    const splitGap = getSplitGap(item);
     updateItemText(item, leftTokens, item.x);
-  } else {
-    addFragment(leftText, textLeft, textY, -1, fontSize);
+    bumpItem(item, -splitGap * 0.45);
+    const rightItem = addActiveItemAfter(item, rightTokens, item.x + item.width + splitGap);
+    bumpItem(rightItem, splitGap * 0.45);
+  } else if (leftStays) {
+    updateItemText(item, leftTokens, item.x);
+    bumpItem(item, -getSplitGap(item) * 0.28);
+  } else if (rightStays) {
     updateItemText(item, rightTokens, splitX - item.padding);
+    bumpItem(item, getSplitGap(item) * 0.28);
   }
 
   addSliceParticles(sliceX, textY, "#ffd166", 18);
   addScorePop(splitX, textY - fontSize * 0.8);
   awardSliceScore();
-  return false;
+  return !leftStays && !rightStays;
 }
 
 function updateItemText(item, tokens, x) {
@@ -882,6 +927,7 @@ function update(dt) {
     item.speed = getCurrentSpeed();
     item.x -= item.speed * seconds;
     item.flash = Math.max(0, item.flash - seconds * 4.4);
+    item.bump = Math.max(0, (item.bump || 0) - seconds * 5.8);
 
     const firstBoundaryX = getBoundaryXs(item)[0] ?? item.x + item.width;
     if (firstBoundaryX <= scene.beltEndX) {
@@ -1121,30 +1167,32 @@ function drawItems() {
 
 function drawItem(item) {
   const rect = getItemRect(item);
+  const drawOffsetX = (item.bump || 0) * (item.bumpOffset || 0);
+  const drawLeft = rect.left + drawOffsetX;
   ctx.save();
   ctx.globalAlpha = 1;
 
   ctx.fillStyle = "rgba(19, 31, 43, 0.26)";
-  roundRect(ctx, rect.left + 5, rect.top + 7, item.width, item.height, 8);
+  roundRect(ctx, drawLeft + 5, rect.top + 7, item.width, item.height, 8);
   ctx.fill();
 
   const flashColor = item.flash > 0 ? `rgba(239, 71, 111, ${0.24 * item.flash})` : "rgba(255, 255, 255, 0)";
   ctx.fillStyle = "#fffaf0";
-  roundRect(ctx, rect.left, rect.top, item.width, item.height, 8);
+  roundRect(ctx, drawLeft, rect.top, item.width, item.height, 8);
   ctx.fill();
   ctx.fillStyle = flashColor;
-  roundRect(ctx, rect.left, rect.top, item.width, item.height, 8);
+  roundRect(ctx, drawLeft, rect.top, item.width, item.height, 8);
   ctx.fill();
 
   ctx.strokeStyle = "#1f2937";
   ctx.lineWidth = 3;
-  roundRect(ctx, rect.left, rect.top, item.width, item.height, 8);
+  roundRect(ctx, drawLeft, rect.top, item.width, item.height, 8);
   ctx.stroke();
 
   ctx.font = thaiFont(item.fontSize);
   ctx.textBaseline = "middle";
   ctx.fillStyle = "#111827";
-  ctx.fillText(item.text, item.x + item.padding, item.y + 1);
+  ctx.fillText(item.text, item.x + item.padding + drawOffsetX, item.y + 1);
   ctx.restore();
 }
 
