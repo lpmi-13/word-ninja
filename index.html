@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="th">
+<html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
@@ -97,6 +97,19 @@ canvas {
 #combo-display.is-visible {
   opacity: 1;
   transform: translateY(0);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+  }
+
+  #combo-display,
+  .stage-meter-fill {
+    transition: none;
+  }
 }
 
 .hud-icon-button {
@@ -372,8 +385,8 @@ h1 {
 <div id="start-screen" class="screen">
   <div class="menu">
     <h1>Thai Word Slice</h1>
-    <div class="subtitle">เกมหั่นคำไทย</div>
-    <div class="example">ฉัน|กิน|ข้าว -> ฉันกินข้าว</div>
+    <div class="subtitle" lang="th">เกมหั่นคำไทย</div>
+    <div class="example"><span lang="th">ฉัน|กิน|ข้าว</span> -> <span lang="th">ฉันกินข้าว</span></div>
     <div class="level-selector" role="group" aria-label="Reading level">
       <button class="level-btn is-active" type="button" data-level="easy">Easy<span>A1</span></button>
       <button class="level-btn" type="button" data-level="medium">Medium<span>A2</span></button>
@@ -397,7 +410,7 @@ h1 {
 
 <div id="game-over-screen" class="screen">
   <div class="menu">
-    <h1>จบเกม</h1>
+    <h1 lang="th">จบเกม</h1>
     <div id="final-label">Final Score</div>
     <div id="final-score">0</div>
     <button class="btn" id="restart-btn" type="button">Play Again</button>
@@ -432,6 +445,9 @@ const HOW_TO_COOKIE = "word_slice_how_to_seen";
 const PROGRESS_STORAGE_KEY = "word_slice_curriculum_progress_v1";
 const NEXT_PHRASE_DELAY = 520;
 const MOBILE_SPEED_REFERENCE_WIDTH = 1280;
+const reducedMotionQuery = typeof window.matchMedia === "function"
+  ? window.matchMedia("(prefers-reduced-motion: reduce)")
+  : null;
 const LEVEL_CONFIG = {
   easy: {
     label: "Easy",
@@ -655,6 +671,17 @@ function clamp(value, min, max) {
 
 function lerp(a, b, t) {
   return a + (b - a) * t;
+}
+
+function prefersReducedMotion() {
+  return reducedMotionQuery?.matches === true;
+}
+
+function clearDecorativeMotionEffects() {
+  particles = [];
+  scorePops = [];
+  celebrationBits = [];
+  slashTrail = [];
 }
 
 function easeOutCubic(t) {
@@ -1179,6 +1206,8 @@ function getCelebrationOrigin(stage, type) {
 }
 
 function addCelebrationBurst(origin, count, type, intensity = 1) {
+  if (prefersReducedMotion()) return;
+
   const spread = type === "level" ? Math.PI * 1.1 : Math.PI * 0.82;
   const baseLife = type === "level" ? 1550 : 1120;
 
@@ -1614,6 +1643,8 @@ function addMissedPhrase(item, boundaryX) {
 }
 
 function addSliceParticles(x, y, color, count) {
+  if (prefersReducedMotion()) return;
+
   for (let i = 0; i < count; i++) {
     particles.push({
       x: x + (Math.random() - 0.5) * 14,
@@ -1630,6 +1661,8 @@ function addSliceParticles(x, y, color, count) {
 }
 
 function addScorePop(x, y) {
+  if (prefersReducedMotion()) return;
+
   scorePops.push({
     text: `+${Math.round(10 * Math.max(1, combo + 1) * LEVEL_CONFIG[selectedLevel].scoreMultiplier)}`,
     x,
@@ -1892,6 +1925,8 @@ function drawFactoryDetails() {
 }
 
 function getBucketCelebrationBounce(bucketIndex) {
+  if (prefersReducedMotion()) return 0;
+
   let bounce = 0;
 
   for (const celebration of completionCelebrations) {
@@ -2219,12 +2254,15 @@ function drawCelebrationBits() {
 }
 
 function getCelebrationAlpha(celebration) {
+  if (prefersReducedMotion()) return 1;
+
   const fadeIn = easeOutCubic(clamp(celebration.elapsed / 260, 0, 1));
   const fadeOut = clamp((celebration.duration - celebration.elapsed) / 420, 0, 1);
   return Math.min(fadeIn, fadeOut);
 }
 
 function drawLevelCelebrationBeams(celebration, alpha) {
+  if (prefersReducedMotion()) return;
   if (celebration.type !== "level" || !scene.buckets?.length) return;
 
   const targetY = Math.max(84, H * 0.26);
@@ -2331,9 +2369,10 @@ function drawCompletionMedallion(x, y, radius, type) {
 
 function drawCompletionBanner(celebration, alpha) {
   const isLevel = celebration.type === "level";
-  const intro = easeOutBack(clamp(celebration.elapsed / 460, 0, 1));
+  const reduceMotion = prefersReducedMotion();
+  const intro = reduceMotion ? 1 : easeOutBack(clamp(celebration.elapsed / 460, 0, 1));
   const lifetime = clamp(celebration.elapsed / celebration.duration, 0, 1);
-  const pulse = 1 + Math.sin(celebration.elapsed / 120) * (isLevel ? 0.018 : 0.012) * (1 - lifetime);
+  const pulse = reduceMotion ? 1 : 1 + Math.sin(celebration.elapsed / 120) * (isLevel ? 0.018 : 0.012) * (1 - lifetime);
   const scale = lerp(0.72, 1, intro) * pulse;
   const maxBannerWidth = Math.max(232, W - (isLevel ? 62 : 54));
   const width = Math.min(
@@ -2543,7 +2582,9 @@ canvas.addEventListener("pointerdown", (event) => {
   canvas.setPointerCapture(event.pointerId);
   const pos = getPointerPos(event);
   pointerPath = [pos];
-  slashTrail.push({ ...pos, life: 1 });
+  if (!prefersReducedMotion()) {
+    slashTrail.push({ ...pos, life: 1 });
+  }
 });
 
 canvas.addEventListener("pointermove", (event) => {
@@ -2552,7 +2593,9 @@ canvas.addEventListener("pointermove", (event) => {
   event.preventDefault();
   const pos = getPointerPos(event);
   pointerPath.push(pos);
-  slashTrail.push({ ...pos, life: 1 });
+  if (!prefersReducedMotion()) {
+    slashTrail.push({ ...pos, life: 1 });
+  }
 
   if (pointerPath.length >= 2) {
     const prev = pointerPath[pointerPath.length - 2];
@@ -2592,6 +2635,11 @@ document.getElementById("restart-btn").addEventListener("click", startGame);
 document.getElementById("how-to-dismiss-btn").addEventListener("click", dismissHowToSplash);
 menuButton.addEventListener("click", returnToMenu);
 window.addEventListener("resize", resize);
+reducedMotionQuery?.addEventListener?.("change", (event) => {
+  if (!event.matches) return;
+  clearDecorativeMotionEffects();
+  draw();
+});
 
 showHowToSplash();
 updateUI();
