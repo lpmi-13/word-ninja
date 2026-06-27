@@ -2,7 +2,7 @@
 
 Word Slice is a Thai word-boundary slicing game.
 
-Thai text moves right-to-left on a cartoony factory conveyor belt. The player slices at valid word boundaries, and correctly sliced fragments fall into a cardboard box below the belt.
+Thai text moves right-to-left on a cartoony factory conveyor belt. The player slices at valid word boundaries, and isolated single-word fragments get collected into factory buckets behind the belt.
 
 ## Thai Content Corpus
 
@@ -31,6 +31,8 @@ Each band is split into two sublevels because the Peace Corps source material gi
 ### Easy
 
 Beginner survival phrases, greetings, identity, numbers, prices, and basic food terms. These are short chunks with high-frequency words and generous slicing targets.
+
+Gameplay stages A1 internally so the first rounds stay predictable and natural. Generated A1 variants are delayed until later pattern-practice sublevels instead of appearing in the first beginner phrases.
 
 Sublevels:
 
