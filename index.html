@@ -24,7 +24,6 @@ body {
   background: #8bd1e7;
   color: var(--ink);
   font-family: "Noto Sans Thai", "Leelawadee UI", Tahoma, sans-serif;
-  touch-action: none;
   user-select: none;
   -webkit-user-select: none;
 }
@@ -35,6 +34,7 @@ canvas {
   inset: 0;
   width: 100vw;
   height: 100vh;
+  touch-action: none;
 }
 
 #ui-overlay {
@@ -146,16 +146,26 @@ canvas {
 }
 
 .screen {
-  position: absolute;
+  position: fixed;
   inset: 0;
   z-index: 20;
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: center;
+  max-height: 100dvh;
+  overflow-x: hidden;
+  overflow-y: auto;
   padding: 18px;
   background:
     linear-gradient(180deg, rgba(139, 209, 231, 0.94), rgba(231, 238, 232, 0.94) 52%, rgba(87, 96, 111, 0.94));
   pointer-events: auto;
+  overscroll-behavior: contain;
+  touch-action: pan-y;
+  -webkit-overflow-scrolling: touch;
+}
+
+.screen > .menu {
+  margin-block: auto;
 }
 
 #game-over-screen { display: none; }
