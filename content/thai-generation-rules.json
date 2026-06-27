@@ -1,0 +1,551 @@
+{
+  "version": 1,
+  "language": "th",
+  "description": "Typed slot and template rules for generating Thai word-boundary slicing phrases from learner-safe patterns.",
+  "targetTotalEntries": 500,
+  "targetTotalByLevel": {
+    "easy": 150,
+    "medium": 220,
+    "difficult": 130
+  },
+  "slotNotes": [
+    "Slots are intentionally small and typed so generation stays explainable.",
+    "Classifier-bearing items include their allowed classifiers.",
+    "Speaker slots include matched polite particles so ผม pairs with ครับ and ดิฉัน pairs with ค่ะ."
+  ],
+  "slots": {
+    "speaker": [
+      { "id": "male", "tokens": ["ผม"], "gloss": "I", "particle": "ครับ" },
+      { "id": "female", "tokens": ["ดิฉัน"], "gloss": "I", "particle": "ค่ะ" }
+    ],
+    "person": [
+      { "id": "i-male", "tokens": ["ผม"], "gloss": "I", "particle": "ครับ" },
+      { "id": "i-female", "tokens": ["ดิฉัน"], "gloss": "I", "particle": "ค่ะ" },
+      { "id": "you-male", "tokens": ["คุณ"], "gloss": "you", "particle": "ครับ" },
+      { "id": "you-female", "tokens": ["คุณ"], "gloss": "you", "particle": "ค่ะ" },
+      { "id": "he-she-male", "tokens": ["เขา"], "gloss": "they", "particle": "ครับ" },
+      { "id": "he-she-female", "tokens": ["เขา"], "gloss": "they", "particle": "ค่ะ" }
+    ],
+    "otherPerson": [
+      { "id": "you-male", "tokens": ["คุณ"], "gloss": "you", "particle": "ครับ" },
+      { "id": "you-female", "tokens": ["คุณ"], "gloss": "you", "particle": "ค่ะ" },
+      { "id": "he-she-male", "tokens": ["เขา"], "gloss": "they", "particle": "ครับ" },
+      { "id": "he-she-female", "tokens": ["เขา"], "gloss": "they", "particle": "ค่ะ" }
+    ],
+    "questionParticle": [
+      { "id": "male", "tokens": ["ครับ"], "gloss": "" },
+      { "id": "female", "tokens": ["คะ"], "gloss": "" }
+    ],
+    "statementParticle": [
+      { "id": "male", "tokens": ["ครับ"], "gloss": "" },
+      { "id": "female", "tokens": ["ค่ะ"], "gloss": "" }
+    ],
+    "name": [
+      { "id": "wichai", "tokens": ["วิชัย"], "gloss": "Wichai" },
+      { "id": "sunisa", "tokens": ["สุนิสา"], "gloss": "Sunisa" },
+      { "id": "nares", "tokens": ["นเรศ"], "gloss": "Nares" },
+      { "id": "nit", "tokens": ["นิด"], "gloss": "Nit" },
+      { "id": "moo", "tokens": ["หมู"], "gloss": "Moo" },
+      { "id": "tom", "tokens": ["ต้อม"], "gloss": "Tom" }
+    ],
+    "maleName": [
+      { "id": "wichai", "tokens": ["วิชัย"], "gloss": "Wichai" },
+      { "id": "nares", "tokens": ["นเรศ"], "gloss": "Nares" },
+      { "id": "tom", "tokens": ["ต้อม"], "gloss": "Tom" }
+    ],
+    "femaleName": [
+      { "id": "sunisa", "tokens": ["สุนิสา"], "gloss": "Sunisa" },
+      { "id": "nit", "tokens": ["นิด"], "gloss": "Nit" }
+    ],
+    "food": [
+      { "id": "rice", "tokens": ["ข้าว"], "gloss": "rice" },
+      { "id": "fish", "tokens": ["ปลา"], "gloss": "fish" },
+      { "id": "shrimp", "tokens": ["กุ้ง"], "gloss": "shrimp" },
+      { "id": "pork", "tokens": ["หมู"], "gloss": "pork" },
+      { "id": "chicken", "tokens": ["ไก่"], "gloss": "chicken" },
+      { "id": "egg", "tokens": ["ไข่"], "gloss": "egg" },
+      { "id": "vegetables", "tokens": ["ผัก"], "gloss": "vegetables" }
+    ],
+    "protein": [
+      { "id": "pork", "tokens": ["หมู"], "gloss": "pork" },
+      { "id": "chicken", "tokens": ["ไก่"], "gloss": "chicken" },
+      { "id": "shrimp", "tokens": ["กุ้ง"], "gloss": "shrimp" },
+      { "id": "fish", "tokens": ["ปลา"], "gloss": "fish" }
+    ],
+    "drink": [
+      { "id": "water", "tokens": ["น้ำ"], "gloss": "water" },
+      { "id": "cold-water", "tokens": ["น้ำ", "เย็น"], "gloss": "cold water" },
+      { "id": "hot-tea", "tokens": ["ชา", "ร้อน"], "gloss": "hot tea" },
+      { "id": "iced-tea", "tokens": ["ชา", "เย็น"], "gloss": "iced tea" },
+      { "id": "hot-coffee", "tokens": ["กาแฟ", "ร้อน"], "gloss": "hot coffee" },
+      { "id": "iced-coffee", "tokens": ["กาแฟ", "เย็น"], "gloss": "iced coffee" }
+    ],
+    "taste": [
+      { "id": "spicy", "tokens": ["เผ็ด"], "gloss": "spicy" },
+      { "id": "sweet", "tokens": ["หวาน"], "gloss": "sweet" },
+      { "id": "sour", "tokens": ["เปรี้ยว"], "gloss": "sour" },
+      { "id": "salty", "tokens": ["เค็ม"], "gloss": "salty" }
+    ],
+    "quantity": [
+      { "id": "one", "tokens": ["หนึ่ง"], "gloss": "one" },
+      { "id": "two", "tokens": ["สอง"], "gloss": "two" },
+      { "id": "three", "tokens": ["สาม"], "gloss": "three" }
+    ],
+    "number": [
+      { "id": "one", "tokens": ["หนึ่ง"], "gloss": "one" },
+      { "id": "two", "tokens": ["สอง"], "gloss": "two" },
+      { "id": "three", "tokens": ["สาม"], "gloss": "three" },
+      { "id": "four", "tokens": ["สี่"], "gloss": "four" },
+      { "id": "five", "tokens": ["ห้า"], "gloss": "five" },
+      { "id": "six", "tokens": ["หก"], "gloss": "six" },
+      { "id": "seven", "tokens": ["เจ็ด"], "gloss": "seven" },
+      { "id": "eight", "tokens": ["แปด"], "gloss": "eight" },
+      { "id": "nine", "tokens": ["เก้า"], "gloss": "nine" }
+    ],
+    "orderItem": [
+      { "id": "fried-rice-pork", "tokens": ["ข้าว", "ผัด", "หมู"], "gloss": "pork fried rice", "classifier": "จาน" },
+      { "id": "fried-rice-chicken", "tokens": ["ข้าว", "ผัด", "ไก่"], "gloss": "chicken fried rice", "classifier": "จาน" },
+      { "id": "fried-rice-shrimp", "tokens": ["ข้าว", "ผัด", "กุ้ง"], "gloss": "shrimp fried rice", "classifier": "จาน" },
+      { "id": "plain-rice", "tokens": ["ข้าว", "เปล่า"], "gloss": "plain rice", "classifier": "จาน" },
+      { "id": "fried-egg", "tokens": ["ไข่", "ดาว"], "gloss": "fried egg", "classifier": "จาน" },
+      { "id": "omelet", "tokens": ["ไข่", "เจียว"], "gloss": "Thai omelet", "classifier": "จาน" },
+      { "id": "noodle-soup", "tokens": ["ก๋วยเตี๋ยว", "น้ำ"], "gloss": "noodle soup", "classifier": "ชาม" },
+      { "id": "egg-noodle-soup", "tokens": ["บะหมี่", "น้ำ"], "gloss": "egg noodle soup", "classifier": "ชาม" },
+      { "id": "cold-water", "tokens": ["น้ำ", "เย็น"], "gloss": "cold water", "classifier": "ขวด" },
+      { "id": "iced-coffee", "tokens": ["กาแฟ", "เย็น"], "gloss": "iced coffee", "classifier": "แก้ว" },
+      { "id": "iced-tea", "tokens": ["ชา", "เย็น"], "gloss": "iced tea", "classifier": "แก้ว" }
+    ],
+    "familyMember": [
+      { "id": "father", "tokens": ["พ่อ"], "gloss": "father" },
+      { "id": "mother", "tokens": ["แม่"], "gloss": "mother" },
+      { "id": "older-brother", "tokens": ["พี่ชาย"], "gloss": "older brother" },
+      { "id": "older-sister", "tokens": ["พี่สาว"], "gloss": "older sister" },
+      { "id": "younger-brother", "tokens": ["น้องชาย"], "gloss": "younger brother" },
+      { "id": "younger-sister", "tokens": ["น้องสาว"], "gloss": "younger sister" },
+      { "id": "siblings", "tokens": ["พี่น้อง"], "gloss": "siblings" }
+    ],
+    "place": [
+      { "id": "market", "tokens": ["ตลาด"], "gloss": "the market" },
+      { "id": "school", "tokens": ["โรงเรียน"], "gloss": "school" },
+      { "id": "hospital", "tokens": ["โรงพยาบาล"], "gloss": "the hospital" },
+      { "id": "temple", "tokens": ["วัด"], "gloss": "the temple" },
+      { "id": "home", "tokens": ["บ้าน"], "gloss": "home" },
+      { "id": "restroom", "tokens": ["ห้องน้ำ"], "gloss": "the restroom" }
+    ],
+    "activity": [
+      { "id": "shower", "tokens": ["อาบน้ำ"], "gloss": "take a shower" },
+      { "id": "sleep", "tokens": ["นอน"], "gloss": "sleep" },
+      { "id": "walk", "tokens": ["เดินเล่น"], "gloss": "go for a walk" }
+    ],
+    "language": [
+      { "id": "english", "tokens": ["ภาษา", "อังกฤษ"], "gloss": "English" },
+      { "id": "thai", "tokens": ["ภาษา", "ไทย"], "gloss": "Thai" }
+    ],
+    "manner": [
+      { "id": "slowly", "tokens": ["ช้าๆ"], "gloss": "slowly" },
+      { "id": "loudly", "tokens": ["ดังๆ"], "gloss": "loudly" }
+    ]
+  },
+  "templates": [
+    {
+      "id": "identity-name-statement",
+      "level": "easy",
+      "sublevel": "easy-1",
+      "sourceRefs": ["peace-corps-thai:lesson-4"],
+      "topics": ["identity"],
+      "parts": [{ "slot": "otherPerson" }, "ชื่อ", { "slot": "name" }, { "slot": "otherPerson", "field": "particle" }],
+      "gloss": "{otherPerson.gloss}'s name is {name.gloss}.",
+      "maxGenerated": 24
+    },
+    {
+      "id": "male-speaker-name-statement",
+      "level": "easy",
+      "sublevel": "easy-1",
+      "sourceRefs": ["peace-corps-thai:lesson-4"],
+      "topics": ["identity"],
+      "parts": ["ผม", "ชื่อ", { "slot": "maleName" }, "ครับ"],
+      "gloss": "My name is {maleName.gloss}.",
+      "maxGenerated": 3
+    },
+    {
+      "id": "female-speaker-name-statement",
+      "level": "easy",
+      "sublevel": "easy-1",
+      "sourceRefs": ["peace-corps-thai:lesson-4"],
+      "topics": ["identity"],
+      "parts": ["ดิฉัน", "ชื่อ", { "slot": "femaleName" }, "ค่ะ"],
+      "gloss": "My name is {femaleName.gloss}.",
+      "maxGenerated": 2
+    },
+    {
+      "id": "identity-name-question",
+      "level": "easy",
+      "sublevel": "easy-1",
+      "sourceRefs": ["peace-corps-thai:lesson-4"],
+      "topics": ["identity", "questions"],
+      "parts": [{ "slot": "person" }, "ชื่อ", "อะไร", { "slot": "questionParticle" }],
+      "gloss": "What is {person.gloss}'s name?",
+      "maxGenerated": 12
+    },
+    {
+      "id": "eat-food-statement",
+      "level": "easy",
+      "sublevel": "easy-2",
+      "sourceRefs": ["peace-corps-thai:lesson-10"],
+      "topics": ["food"],
+      "parts": [{ "slot": "speaker" }, "กิน", { "slot": "food" }, { "slot": "speaker", "field": "particle" }],
+      "gloss": "{speaker.gloss} eat {food.gloss}.",
+      "maxGenerated": 14
+    },
+    {
+      "id": "drink-statement",
+      "level": "easy",
+      "sublevel": "easy-2",
+      "sourceRefs": ["peace-corps-thai:lesson-10"],
+      "topics": ["drinks"],
+      "parts": [{ "slot": "speaker" }, "ดื่ม", { "slot": "drink" }, { "slot": "speaker", "field": "particle" }],
+      "gloss": "{speaker.gloss} drink {drink.gloss}.",
+      "maxGenerated": 12
+    },
+    {
+      "id": "simple-food-dish",
+      "level": "easy",
+      "sublevel": "easy-2",
+      "sourceRefs": ["peace-corps-thai:lessons-7-8"],
+      "topics": ["food"],
+      "parts": ["ข้าว", "ผัด", { "slot": "protein" }],
+      "gloss": "Fried rice with {protein.gloss}.",
+      "maxGenerated": 4
+    },
+    {
+      "id": "price-question",
+      "level": "easy",
+      "sublevel": "easy-2",
+      "sourceRefs": ["peace-corps-thai:lesson-6"],
+      "topics": ["prices", "questions"],
+      "parts": ["นี่", "กี่", "บาท", { "slot": "questionParticle" }],
+      "gloss": "How many baht is this?",
+      "maxGenerated": 2
+    },
+    {
+      "id": "price-answer",
+      "level": "easy",
+      "sublevel": "easy-2",
+      "sourceRefs": ["peace-corps-thai:lessons-5-6"],
+      "topics": ["prices", "numbers"],
+      "parts": [{ "slot": "number" }, "บาท"],
+      "gloss": "{number.gloss} baht.",
+      "maxGenerated": 9
+    },
+    {
+      "id": "this-is-food",
+      "level": "easy",
+      "sublevel": "easy-2",
+      "sourceRefs": ["peace-corps-thai:lesson-10"],
+      "topics": ["food"],
+      "parts": ["นี่", { "slot": "food" }, { "slot": "statementParticle" }],
+      "gloss": "This is {food.gloss}.",
+      "maxGenerated": 14
+    },
+    {
+      "id": "that-is-food",
+      "level": "easy",
+      "sublevel": "easy-2",
+      "sourceRefs": ["peace-corps-thai:lesson-10"],
+      "topics": ["food"],
+      "parts": ["นั่น", { "slot": "food" }, { "slot": "statementParticle" }],
+      "gloss": "That is {food.gloss}.",
+      "maxGenerated": 14
+    },
+    {
+      "id": "simple-food-delicious",
+      "level": "easy",
+      "sublevel": "easy-2",
+      "sourceRefs": ["peace-corps-thai:lesson-10"],
+      "topics": ["food", "opinions"],
+      "parts": [{ "slot": "food" }, "อร่อย", { "slot": "statementParticle" }],
+      "gloss": "{food.gloss} is delicious.",
+      "maxGenerated": 14
+    },
+    {
+      "id": "ask-for-drink",
+      "level": "easy",
+      "sublevel": "easy-2",
+      "sourceRefs": ["peace-corps-thai:lesson-9"],
+      "topics": ["ordering", "drinks"],
+      "parts": ["ขอ", { "slot": "drink" }, { "slot": "statementParticle" }],
+      "gloss": "Can I have {drink.gloss}?",
+      "maxGenerated": 12
+    },
+    {
+      "id": "simple-fried-protein",
+      "level": "easy",
+      "sublevel": "easy-2",
+      "sourceRefs": ["peace-corps-thai:lesson-8"],
+      "topics": ["food"],
+      "parts": [{ "slot": "protein" }, "ทอด"],
+      "gloss": "Fried {protein.gloss}.",
+      "maxGenerated": 4
+    },
+    {
+      "id": "simple-grilled-protein",
+      "level": "easy",
+      "sublevel": "easy-2",
+      "sourceRefs": ["peace-corps-thai:lesson-8"],
+      "topics": ["food"],
+      "parts": [{ "slot": "protein" }, "ย่าง"],
+      "gloss": "Grilled {protein.gloss}.",
+      "maxGenerated": 4
+    },
+    {
+      "id": "like-eat-food",
+      "level": "medium",
+      "sublevel": "medium-2",
+      "sourceRefs": ["peace-corps-thai:lesson-10"],
+      "topics": ["food", "preferences"],
+      "parts": [{ "slot": "speaker" }, "ชอบ", "กิน", { "slot": "food" }, { "slot": "speaker", "field": "particle" }],
+      "gloss": "{speaker.gloss} like to eat {food.gloss}.",
+      "maxGenerated": 14
+    },
+    {
+      "id": "like-eat-food-question",
+      "level": "medium",
+      "sublevel": "medium-2",
+      "sourceRefs": ["peace-corps-thai:lesson-10"],
+      "topics": ["food", "preferences", "questions"],
+      "parts": ["คุณ", "ชอบ", "กิน", { "slot": "food" }, "ไหม", { "slot": "questionParticle" }],
+      "gloss": "Do you like to eat {food.gloss}?",
+      "maxGenerated": 14
+    },
+    {
+      "id": "negative-eat-food",
+      "level": "medium",
+      "sublevel": "medium-2",
+      "sourceRefs": ["peace-corps-thai:lesson-10"],
+      "topics": ["food", "preferences"],
+      "parts": [{ "slot": "speaker" }, "ไม่", "กิน", { "slot": "food" }, { "slot": "speaker", "field": "particle" }],
+      "gloss": "{speaker.gloss} do not eat {food.gloss}.",
+      "maxGenerated": 14
+    },
+    {
+      "id": "order-item-simple",
+      "level": "medium",
+      "sublevel": "medium-1",
+      "sourceRefs": ["peace-corps-thai:lesson-9"],
+      "topics": ["ordering"],
+      "parts": ["ขอ", { "slot": "orderItem" }, { "slot": "statementParticle" }],
+      "gloss": "Can I have {orderItem.gloss}?",
+      "maxGenerated": 22
+    },
+    {
+      "id": "order-item-quantity",
+      "level": "medium",
+      "sublevel": "medium-1",
+      "sourceRefs": ["peace-corps-thai:lesson-9"],
+      "topics": ["ordering", "classifiers"],
+      "parts": ["ขอ", { "slot": "orderItem" }, { "slot": "quantity" }, { "slot": "orderItem", "field": "classifier" }, { "slot": "statementParticle" }],
+      "gloss": "Can I have {quantity.gloss} {classifierOf.orderItem} of {orderItem.gloss}?",
+      "maxGenerated": 66
+    },
+    {
+      "id": "all-this-price-question",
+      "level": "medium",
+      "sublevel": "medium-1",
+      "sourceRefs": ["peace-corps-thai:lesson-9"],
+      "topics": ["ordering", "prices", "questions"],
+      "parts": ["ทั้งหมด", "เท่าไร", { "slot": "questionParticle" }],
+      "gloss": "How much is all of this?",
+      "maxGenerated": 2
+    },
+    {
+      "id": "food-ability-question",
+      "level": "medium",
+      "sublevel": "medium-2",
+      "sourceRefs": ["peace-corps-thai:lesson-10"],
+      "topics": ["food", "ability", "questions"],
+      "parts": ["คุณ", "กิน", "อาหาร", { "slot": "taste" }, "ได้", "ไหม", { "slot": "questionParticle" }],
+      "gloss": "Can you eat {taste.gloss} food?",
+      "maxGenerated": 8
+    },
+    {
+      "id": "food-ability-statement",
+      "level": "medium",
+      "sublevel": "medium-2",
+      "sourceRefs": ["peace-corps-thai:lesson-10"],
+      "topics": ["food", "ability"],
+      "parts": [{ "slot": "speaker" }, "กิน", "อาหาร", { "slot": "taste" }, "ได้", { "slot": "speaker", "field": "particle" }],
+      "gloss": "{speaker.gloss} can eat {taste.gloss} food.",
+      "maxGenerated": 8
+    },
+    {
+      "id": "food-ability-little",
+      "level": "difficult",
+      "sublevel": "difficult-2",
+      "sourceRefs": ["peace-corps-thai:lesson-10"],
+      "topics": ["food", "ability"],
+      "parts": [{ "slot": "speaker" }, "กิน", "อาหาร", { "slot": "taste" }, "ได้", "นิดหน่อย", { "slot": "speaker", "field": "particle" }],
+      "gloss": "{speaker.gloss} can eat {taste.gloss} food a little.",
+      "maxGenerated": 8
+    },
+    {
+      "id": "food-ability-negative",
+      "level": "difficult",
+      "sublevel": "difficult-2",
+      "sourceRefs": ["peace-corps-thai:lesson-10"],
+      "topics": ["food", "ability"],
+      "parts": [{ "slot": "speaker" }, "กิน", "อาหาร", { "slot": "taste" }, "ไม่", "ได้", { "slot": "speaker", "field": "particle" }],
+      "gloss": "{speaker.gloss} cannot eat {taste.gloss} food.",
+      "maxGenerated": 8
+    },
+    {
+      "id": "family-have-number",
+      "level": "medium",
+      "sublevel": "medium-2",
+      "sourceRefs": ["peace-corps-thai:lesson-11"],
+      "topics": ["family", "numbers"],
+      "parts": [{ "slot": "speaker" }, "มี", { "slot": "familyMember" }, { "slot": "number" }, "คน", { "slot": "speaker", "field": "particle" }],
+      "gloss": "{speaker.gloss} have {number.gloss} {familyMember.gloss}.",
+      "maxGenerated": 60
+    },
+    {
+      "id": "family-how-many",
+      "level": "medium",
+      "sublevel": "medium-2",
+      "sourceRefs": ["peace-corps-thai:lesson-11"],
+      "topics": ["family", "questions"],
+      "parts": ["คุณ", "มี", { "slot": "familyMember" }, "กี่", "คน", { "slot": "questionParticle" }],
+      "gloss": "How many {familyMember.gloss} do you have?",
+      "maxGenerated": 14
+    },
+    {
+      "id": "want-go-place",
+      "level": "difficult",
+      "sublevel": "difficult-1",
+      "sourceRefs": ["peace-corps-thai:lesson-12"],
+      "topics": ["wishes", "places"],
+      "parts": [{ "slot": "speaker" }, "อยาก", "จะ", "ไป", { "slot": "place" }, { "slot": "speaker", "field": "particle" }],
+      "gloss": "{speaker.gloss} want to go to {place.gloss}.",
+      "maxGenerated": 12
+    },
+    {
+      "id": "permission-go-place",
+      "level": "difficult",
+      "sublevel": "difficult-1",
+      "sourceRefs": ["peace-corps-thai:lesson-12"],
+      "topics": ["places", "permission", "questions"],
+      "parts": [{ "slot": "speaker" }, "ไป", { "slot": "place" }, "ได้", "ไหม", { "slot": "speaker", "field": "particle" }],
+      "gloss": "May {speaker.gloss} go to {place.gloss}?",
+      "maxGenerated": 12
+    },
+    {
+      "id": "request-permission-place",
+      "level": "difficult",
+      "sublevel": "difficult-1",
+      "sourceRefs": ["peace-corps-thai:lesson-12"],
+      "topics": ["places", "permission", "questions"],
+      "parts": ["ขอ", "ไป", { "slot": "place" }, "ได้", "ไหม", { "slot": "questionParticle" }],
+      "gloss": "May I go to {place.gloss}?",
+      "maxGenerated": 12
+    },
+    {
+      "id": "want-activity",
+      "level": "difficult",
+      "sublevel": "difficult-1",
+      "sourceRefs": ["peace-corps-thai:lesson-12"],
+      "topics": ["wishes"],
+      "parts": [{ "slot": "speaker" }, "อยาก", "จะ", { "slot": "activity" }, { "slot": "speaker", "field": "particle" }],
+      "gloss": "{speaker.gloss} want to {activity.gloss}.",
+      "maxGenerated": 6
+    },
+    {
+      "id": "language-can-speak",
+      "level": "difficult",
+      "sublevel": "difficult-1",
+      "sourceRefs": ["peace-corps-thai:lesson-13"],
+      "topics": ["communication", "questions"],
+      "parts": ["คุณ", "พูด", { "slot": "language" }, "ได้", "ไหม", { "slot": "questionParticle" }],
+      "gloss": "Can you speak {language.gloss}?",
+      "maxGenerated": 4
+    },
+    {
+      "id": "repeat-manner",
+      "level": "difficult",
+      "sublevel": "difficult-1",
+      "sourceRefs": ["peace-corps-thai:lesson-13"],
+      "topics": ["communication"],
+      "parts": ["พูด", { "slot": "manner" }, "หน่อย", { "slot": "statementParticle" }],
+      "gloss": "Please speak {manner.gloss}.",
+      "maxGenerated": 4
+    },
+    {
+      "id": "take-person-place",
+      "level": "difficult",
+      "sublevel": "difficult-2",
+      "sourceRefs": ["peace-corps-thai:lesson-13"],
+      "topics": ["directions", "places", "help"],
+      "parts": ["พา", { "slot": "speaker" }, "ไป", { "slot": "place" }, "หน่อย", { "slot": "speaker", "field": "particle" }],
+      "gloss": "Please take {speaker.gloss} to {place.gloss}.",
+      "maxGenerated": 12
+    },
+    {
+      "id": "cannot-eat-food",
+      "level": "difficult",
+      "sublevel": "difficult-2",
+      "sourceRefs": ["peace-corps-thai:lesson-10"],
+      "topics": ["food", "ability", "allergies"],
+      "parts": [{ "slot": "speaker" }, "กิน", { "slot": "food" }, "ไม่", "ได้", { "slot": "speaker", "field": "particle" }],
+      "gloss": "{speaker.gloss} cannot eat {food.gloss}.",
+      "maxGenerated": 14
+    },
+    {
+      "id": "allergic-seafood",
+      "level": "difficult",
+      "sublevel": "difficult-2",
+      "sourceRefs": ["peace-corps-thai:lesson-10"],
+      "topics": ["food", "allergies"],
+      "parts": [{ "slot": "speaker" }, "แพ้", "อาหาร", "ทะเล", { "slot": "speaker", "field": "particle" }],
+      "gloss": "{speaker.gloss} is allergic to seafood.",
+      "maxGenerated": 2
+    },
+    {
+      "id": "food-is-delicious",
+      "level": "difficult",
+      "sublevel": "difficult-2",
+      "sourceRefs": ["peace-corps-thai:lesson-10"],
+      "topics": ["food", "opinions"],
+      "parts": [{ "slot": "food" }, "อร่อย", "มาก", { "slot": "statementParticle" }],
+      "gloss": "{food.gloss} is very delicious.",
+      "maxGenerated": 14
+    },
+    {
+      "id": "want-more-food",
+      "level": "difficult",
+      "sublevel": "difficult-2",
+      "sourceRefs": ["peace-corps-thai:lesson-10"],
+      "topics": ["food", "ordering", "questions"],
+      "parts": ["เอา", { "slot": "food" }, "อีก", "ไหม", { "slot": "questionParticle" }],
+      "gloss": "Do you want more {food.gloss}?",
+      "maxGenerated": 14
+    },
+    {
+      "id": "may-help",
+      "level": "difficult",
+      "sublevel": "difficult-2",
+      "sourceRefs": ["peace-corps-thai:lesson-13"],
+      "topics": ["help", "questions"],
+      "parts": ["ให้", { "slot": "speaker" }, "ช่วย", "ไหม", { "slot": "speaker", "field": "particle" }],
+      "gloss": "May {speaker.gloss} help?",
+      "maxGenerated": 2
+    },
+    {
+      "id": "full-enough",
+      "level": "difficult",
+      "sublevel": "difficult-2",
+      "sourceRefs": ["peace-corps-thai:lesson-10"],
+      "topics": ["food"],
+      "parts": ["พอ", "แล้ว", { "slot": "speaker", "field": "particle" }, { "slot": "speaker" }, "อิ่ม", "แล้ว", { "slot": "speaker", "field": "particle" }],
+      "gloss": "That's enough. {speaker.gloss} am full.",
+      "maxGenerated": 2
+    }
+  ]
+}

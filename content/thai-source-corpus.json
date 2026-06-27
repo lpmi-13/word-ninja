@@ -1,0 +1,918 @@
+{
+  "version": 1,
+  "language": "th",
+  "description": "Starter source corpus for Thai word-boundary slicing challenges. Text is normalized Thai script with explicit gameplay tokens.",
+  "sourcePolicy": "Entries are adapted from public-domain Peace Corps Thai lesson topics and checked against beginner curriculum progression from FSI Thai Basic Course. Frequency lists are used only as a rough sanity-check signal; no frequency rows are bundled here.",
+  "tokenPolicy": "Tokens are curated learner-facing Thai word or lexical-unit boundaries. Common compounds, proper names, and number expressions may intentionally differ from browser Intl.Segmenter output.",
+  "sources": {
+    "peace-corps-thai": {
+      "title": "Peace Corps Basic Introduction to Thai Language",
+      "url": "https://fsi-languages.yojik.eu/languages/PeaceCorps/Thai.html",
+      "licenseNote": "Yojik mirror states Peace Corps content is public domain.",
+      "use": "Primary phrase and topic source."
+    },
+    "fsi-thai-basic": {
+      "title": "FSI Thai Basic Course",
+      "url": "https://fsi-languages.yojik.eu/languages/FSI/fsi-thai.html",
+      "licenseNote": "Yojik mirror states FSI content is public domain.",
+      "use": "Curriculum progression reference for beginner-to-intermediate ordering."
+    },
+    "frequencywords-thai-2018": {
+      "title": "FrequencyWords Thai 2018 OpenSubtitles-derived list",
+      "url": "https://github.com/hermitdave/FrequencyWords/tree/master/content/2018/th",
+      "licenseNote": "Repository README states MIT for code and CC BY-SA 4.0 for content.",
+      "use": "Optional frequency sanity-check only; not copied into this corpus."
+    }
+  },
+  "levels": [
+    {
+      "level": "easy",
+      "sublevels": [
+        {
+          "id": "easy-1",
+          "label": "Greetings and identity",
+          "sourceRefs": ["peace-corps-thai:lessons-3-4"],
+          "targetChunkTokens": "2-4"
+        },
+        {
+          "id": "easy-2",
+          "label": "Numbers, prices, and basic food",
+          "sourceRefs": ["peace-corps-thai:lessons-5-8"],
+          "targetChunkTokens": "2-4"
+        }
+      ]
+    },
+    {
+      "level": "medium",
+      "sublevels": [
+        {
+          "id": "medium-1",
+          "label": "Ordering and simple food expressions",
+          "sourceRefs": ["peace-corps-thai:lessons-9-10"],
+          "targetChunkTokens": "3-6"
+        },
+        {
+          "id": "medium-2",
+          "label": "Preferences, family, and quantities",
+          "sourceRefs": ["peace-corps-thai:lessons-10-11"],
+          "targetChunkTokens": "5-7"
+        }
+      ]
+    },
+    {
+      "level": "difficult",
+      "sublevels": [
+        {
+          "id": "difficult-1",
+          "label": "Wishes, places, and repair phrases",
+          "sourceRefs": ["peace-corps-thai:lessons-12-13"],
+          "targetChunkTokens": "4-7"
+        },
+        {
+          "id": "difficult-2",
+          "label": "Longer service and conversation chunks",
+          "sourceRefs": ["peace-corps-thai:lessons-10-13"],
+          "targetChunkTokens": "5-8"
+        }
+      ]
+    }
+  ],
+  "entries": [
+    {
+      "id": "th-e1-001",
+      "level": "easy",
+      "sublevel": "easy-1",
+      "sourceRefs": ["peace-corps-thai:lesson-4"],
+      "topics": ["greetings"],
+      "text": "สวัสดีครับ",
+      "tokens": ["สวัสดี", "ครับ"],
+      "gloss": "Hello.",
+      "frequencySignal": "high"
+    },
+    {
+      "id": "th-e1-002",
+      "level": "easy",
+      "sublevel": "easy-1",
+      "sourceRefs": ["peace-corps-thai:lesson-4"],
+      "topics": ["greetings"],
+      "text": "สวัสดีค่ะ",
+      "tokens": ["สวัสดี", "ค่ะ"],
+      "gloss": "Hello.",
+      "frequencySignal": "high"
+    },
+    {
+      "id": "th-e1-003",
+      "level": "easy",
+      "sublevel": "easy-1",
+      "sourceRefs": ["peace-corps-thai:lesson-4"],
+      "topics": ["identity"],
+      "text": "ผมชื่อวิชัย",
+      "tokens": ["ผม", "ชื่อ", "วิชัย"],
+      "gloss": "My name is Wichai.",
+      "frequencySignal": "high"
+    },
+    {
+      "id": "th-e1-004",
+      "level": "easy",
+      "sublevel": "easy-1",
+      "sourceRefs": ["peace-corps-thai:lesson-4"],
+      "topics": ["identity"],
+      "text": "ดิฉันชื่อสุนิสา",
+      "tokens": ["ดิฉัน", "ชื่อ", "สุนิสา"],
+      "gloss": "My name is Sunisa.",
+      "frequencySignal": "medium"
+    },
+    {
+      "id": "th-e1-005",
+      "level": "easy",
+      "sublevel": "easy-1",
+      "sourceRefs": ["peace-corps-thai:lesson-4"],
+      "topics": ["identity"],
+      "text": "เขาชื่อนเรศ",
+      "tokens": ["เขา", "ชื่อ", "นเรศ"],
+      "gloss": "Their name is Nares.",
+      "frequencySignal": "high"
+    },
+    {
+      "id": "th-e1-006",
+      "level": "easy",
+      "sublevel": "easy-1",
+      "sourceRefs": ["peace-corps-thai:lesson-4"],
+      "topics": ["identity", "questions"],
+      "text": "คุณชื่ออะไรคะ",
+      "tokens": ["คุณ", "ชื่อ", "อะไร", "คะ"],
+      "gloss": "What is your name?",
+      "frequencySignal": "high"
+    },
+    {
+      "id": "th-e1-007",
+      "level": "easy",
+      "sublevel": "easy-1",
+      "sourceRefs": ["peace-corps-thai:lesson-4"],
+      "topics": ["identity", "questions"],
+      "text": "เขาชื่ออะไรครับ",
+      "tokens": ["เขา", "ชื่อ", "อะไร", "ครับ"],
+      "gloss": "What is their name?",
+      "frequencySignal": "high"
+    },
+    {
+      "id": "th-e1-008",
+      "level": "easy",
+      "sublevel": "easy-1",
+      "sourceRefs": ["peace-corps-thai:lesson-4"],
+      "topics": ["identity"],
+      "text": "ผมนามสกุลวิสุทธา",
+      "tokens": ["ผม", "นามสกุล", "วิสุทธา"],
+      "gloss": "My last name is Wisuttha.",
+      "frequencySignal": "medium"
+    },
+    {
+      "id": "th-e1-009",
+      "level": "easy",
+      "sublevel": "easy-1",
+      "sourceRefs": ["peace-corps-thai:lesson-4"],
+      "topics": ["identity", "questions"],
+      "text": "คุณนามสกุลอะไรคะ",
+      "tokens": ["คุณ", "นามสกุล", "อะไร", "คะ"],
+      "gloss": "What is your last name?",
+      "frequencySignal": "medium"
+    },
+    {
+      "id": "th-e1-010",
+      "level": "easy",
+      "sublevel": "easy-1",
+      "sourceRefs": ["peace-corps-thai:lesson-4"],
+      "topics": ["greetings"],
+      "text": "ผมสบายดีครับ",
+      "tokens": ["ผม", "สบาย", "ดี", "ครับ"],
+      "gloss": "I am fine.",
+      "frequencySignal": "high"
+    },
+    {
+      "id": "th-e1-011",
+      "level": "easy",
+      "sublevel": "easy-1",
+      "sourceRefs": ["peace-corps-thai:lesson-4"],
+      "topics": ["greetings", "questions"],
+      "text": "คุณสบายดีไหมครับ",
+      "tokens": ["คุณ", "สบาย", "ดี", "ไหม", "ครับ"],
+      "gloss": "How are you?",
+      "frequencySignal": "high"
+    },
+    {
+      "id": "th-e1-012",
+      "level": "easy",
+      "sublevel": "easy-1",
+      "sourceRefs": ["peace-corps-thai:lesson-4", "peace-corps-thai:lesson-13"],
+      "topics": ["greetings"],
+      "text": "ขอบคุณครับ",
+      "tokens": ["ขอบคุณ", "ครับ"],
+      "gloss": "Thank you.",
+      "frequencySignal": "high"
+    },
+    {
+      "id": "th-e1-013",
+      "level": "easy",
+      "sublevel": "easy-1",
+      "sourceRefs": ["peace-corps-thai:lesson-13"],
+      "topics": ["useful-expressions"],
+      "text": "ขอบคุณค่ะ",
+      "tokens": ["ขอบคุณ", "ค่ะ"],
+      "gloss": "Thank you.",
+      "frequencySignal": "high"
+    },
+    {
+      "id": "th-e1-014",
+      "level": "easy",
+      "sublevel": "easy-1",
+      "sourceRefs": ["peace-corps-thai:lesson-13"],
+      "topics": ["useful-expressions"],
+      "text": "ขอโทษครับ",
+      "tokens": ["ขอโทษ", "ครับ"],
+      "gloss": "Excuse me / sorry.",
+      "frequencySignal": "high"
+    },
+    {
+      "id": "th-e1-015",
+      "level": "easy",
+      "sublevel": "easy-1",
+      "sourceRefs": ["peace-corps-thai:lesson-13"],
+      "topics": ["useful-expressions"],
+      "text": "ไม่เป็นไรค่ะ",
+      "tokens": ["ไม่", "เป็นไร", "ค่ะ"],
+      "gloss": "It's okay / never mind.",
+      "frequencySignal": "high"
+    },
+    {
+      "id": "th-e1-016",
+      "level": "easy",
+      "sublevel": "easy-1",
+      "sourceRefs": ["peace-corps-thai:lesson-13"],
+      "topics": ["help"],
+      "text": "ช่วยด้วย",
+      "tokens": ["ช่วย", "ด้วย"],
+      "gloss": "Help!",
+      "frequencySignal": "high"
+    },
+    {
+      "id": "th-e2-001",
+      "level": "easy",
+      "sublevel": "easy-2",
+      "sourceRefs": ["peace-corps-thai:lesson-6"],
+      "topics": ["prices", "questions"],
+      "text": "นี่กี่บาทครับ",
+      "tokens": ["นี่", "กี่", "บาท", "ครับ"],
+      "gloss": "How many baht is this?",
+      "frequencySignal": "high"
+    },
+    {
+      "id": "th-e2-002",
+      "level": "easy",
+      "sublevel": "easy-2",
+      "sourceRefs": ["peace-corps-thai:lessons-5-6"],
+      "topics": ["prices", "numbers"],
+      "text": "สามสิบห้าบาท",
+      "tokens": ["สามสิบห้า", "บาท"],
+      "gloss": "Thirty-five baht.",
+      "frequencySignal": "medium"
+    },
+    {
+      "id": "th-e2-003",
+      "level": "easy",
+      "sublevel": "easy-2",
+      "sourceRefs": ["peace-corps-thai:lesson-8"],
+      "topics": ["food"],
+      "text": "ข้าวผัดหมู",
+      "tokens": ["ข้าว", "ผัด", "หมู"],
+      "gloss": "Fried rice with pork.",
+      "frequencySignal": "high"
+    },
+    {
+      "id": "th-e2-004",
+      "level": "easy",
+      "sublevel": "easy-2",
+      "sourceRefs": ["peace-corps-thai:lesson-8"],
+      "topics": ["food"],
+      "text": "ข้าวผัดไก่",
+      "tokens": ["ข้าว", "ผัด", "ไก่"],
+      "gloss": "Fried rice with chicken.",
+      "frequencySignal": "high"
+    },
+    {
+      "id": "th-e2-005",
+      "level": "easy",
+      "sublevel": "easy-2",
+      "sourceRefs": ["peace-corps-thai:lesson-8"],
+      "topics": ["food"],
+      "text": "ข้าวผัดกุ้ง",
+      "tokens": ["ข้าว", "ผัด", "กุ้ง"],
+      "gloss": "Fried rice with shrimp.",
+      "frequencySignal": "medium"
+    },
+    {
+      "id": "th-e2-006",
+      "level": "easy",
+      "sublevel": "easy-2",
+      "sourceRefs": ["peace-corps-thai:lesson-8"],
+      "topics": ["food"],
+      "text": "ก๋วยเตี๋ยวน้ำ",
+      "tokens": ["ก๋วยเตี๋ยว", "น้ำ"],
+      "gloss": "Noodle soup.",
+      "frequencySignal": "medium"
+    },
+    {
+      "id": "th-e2-007",
+      "level": "easy",
+      "sublevel": "easy-2",
+      "sourceRefs": ["peace-corps-thai:lesson-8"],
+      "topics": ["food"],
+      "text": "บะหมี่น้ำ",
+      "tokens": ["บะหมี่", "น้ำ"],
+      "gloss": "Egg noodle soup.",
+      "frequencySignal": "medium"
+    },
+    {
+      "id": "th-e2-008",
+      "level": "easy",
+      "sublevel": "easy-2",
+      "sourceRefs": ["peace-corps-thai:lesson-8"],
+      "topics": ["food"],
+      "text": "ไข่เจียว",
+      "tokens": ["ไข่", "เจียว"],
+      "gloss": "Thai omelet.",
+      "frequencySignal": "medium"
+    },
+    {
+      "id": "th-e2-009",
+      "level": "easy",
+      "sublevel": "easy-2",
+      "sourceRefs": ["peace-corps-thai:lesson-8"],
+      "topics": ["food"],
+      "text": "ไข่ดาว",
+      "tokens": ["ไข่", "ดาว"],
+      "gloss": "Fried egg.",
+      "frequencySignal": "medium"
+    },
+    {
+      "id": "th-e2-010",
+      "level": "easy",
+      "sublevel": "easy-2",
+      "sourceRefs": ["peace-corps-thai:lesson-7"],
+      "topics": ["drinks"],
+      "text": "กาแฟเย็น",
+      "tokens": ["กาแฟ", "เย็น"],
+      "gloss": "Iced coffee.",
+      "frequencySignal": "medium"
+    },
+    {
+      "id": "th-e2-011",
+      "level": "easy",
+      "sublevel": "easy-2",
+      "sourceRefs": ["peace-corps-thai:lesson-7"],
+      "topics": ["drinks"],
+      "text": "ชาร้อน",
+      "tokens": ["ชา", "ร้อน"],
+      "gloss": "Hot tea.",
+      "frequencySignal": "medium"
+    },
+    {
+      "id": "th-e2-012",
+      "level": "easy",
+      "sublevel": "easy-2",
+      "sourceRefs": ["peace-corps-thai:lesson-9"],
+      "topics": ["drinks"],
+      "text": "น้ำเย็น",
+      "tokens": ["น้ำ", "เย็น"],
+      "gloss": "Cold water.",
+      "frequencySignal": "high"
+    },
+    {
+      "id": "th-m1-001",
+      "level": "medium",
+      "sublevel": "medium-1",
+      "sourceRefs": ["peace-corps-thai:lesson-9"],
+      "topics": ["ordering", "questions"],
+      "text": "เอาอะไรคะ",
+      "tokens": ["เอา", "อะไร", "คะ"],
+      "gloss": "What would you like?",
+      "frequencySignal": "high"
+    },
+    {
+      "id": "th-m1-002",
+      "level": "medium",
+      "sublevel": "medium-1",
+      "sourceRefs": ["peace-corps-thai:lesson-9"],
+      "topics": ["ordering", "food"],
+      "text": "ขอข้าวผัดกุ้งครับ",
+      "tokens": ["ขอ", "ข้าว", "ผัด", "กุ้ง", "ครับ"],
+      "gloss": "Can I have shrimp fried rice?",
+      "frequencySignal": "medium"
+    },
+    {
+      "id": "th-m1-003",
+      "level": "medium",
+      "sublevel": "medium-1",
+      "sourceRefs": ["peace-corps-thai:lesson-9"],
+      "topics": ["ordering", "drinks", "classifiers"],
+      "text": "ขอน้ำเย็นหนึ่งขวดครับ",
+      "tokens": ["ขอ", "น้ำ", "เย็น", "หนึ่ง", "ขวด", "ครับ"],
+      "gloss": "Can I have one bottle of cold water?",
+      "frequencySignal": "medium"
+    },
+    {
+      "id": "th-m1-004",
+      "level": "medium",
+      "sublevel": "medium-1",
+      "sourceRefs": ["peace-corps-thai:lesson-9"],
+      "topics": ["ordering", "food", "classifiers"],
+      "text": "ขอไก่ย่างสองชิ้น",
+      "tokens": ["ขอ", "ไก่", "ย่าง", "สอง", "ชิ้น"],
+      "gloss": "Can I have two pieces of grilled chicken?",
+      "frequencySignal": "medium"
+    },
+    {
+      "id": "th-m1-005",
+      "level": "medium",
+      "sublevel": "medium-1",
+      "sourceRefs": ["peace-corps-thai:lesson-9"],
+      "topics": ["ordering", "food", "classifiers"],
+      "text": "ขอข้าวเปล่าหนึ่งจาน",
+      "tokens": ["ขอ", "ข้าว", "เปล่า", "หนึ่ง", "จาน"],
+      "gloss": "Can I have one plate of plain rice?",
+      "frequencySignal": "medium"
+    },
+    {
+      "id": "th-m1-006",
+      "level": "medium",
+      "sublevel": "medium-1",
+      "sourceRefs": ["peace-corps-thai:lesson-9"],
+      "topics": ["prices", "questions"],
+      "text": "ทั้งหมดเท่าไรคะ",
+      "tokens": ["ทั้งหมด", "เท่าไร", "คะ"],
+      "gloss": "How much is all of this?",
+      "frequencySignal": "medium"
+    },
+    {
+      "id": "th-m1-007",
+      "level": "medium",
+      "sublevel": "medium-1",
+      "sourceRefs": ["peace-corps-thai:lesson-10"],
+      "topics": ["questions", "food"],
+      "text": "นี่อะไรครับ",
+      "tokens": ["นี่", "อะไร", "ครับ"],
+      "gloss": "What is this?",
+      "frequencySignal": "high"
+    },
+    {
+      "id": "th-m1-008",
+      "level": "medium",
+      "sublevel": "medium-1",
+      "sourceRefs": ["peace-corps-thai:lesson-10"],
+      "topics": ["questions", "food"],
+      "text": "นั่นอะไรคะ",
+      "tokens": ["นั่น", "อะไร", "คะ"],
+      "gloss": "What is that?",
+      "frequencySignal": "high"
+    },
+    {
+      "id": "th-m1-009",
+      "level": "medium",
+      "sublevel": "medium-1",
+      "sourceRefs": ["peace-corps-thai:lesson-10"],
+      "topics": ["food", "opinions"],
+      "text": "อร่อยมากครับ",
+      "tokens": ["อร่อย", "มาก", "ครับ"],
+      "gloss": "Very delicious.",
+      "frequencySignal": "medium"
+    },
+    {
+      "id": "th-m1-010",
+      "level": "medium",
+      "sublevel": "medium-1",
+      "sourceRefs": ["peace-corps-thai:lesson-10"],
+      "topics": ["food", "ordering"],
+      "text": "พอแล้วค่ะ",
+      "tokens": ["พอ", "แล้ว", "ค่ะ"],
+      "gloss": "That's enough.",
+      "frequencySignal": "high"
+    },
+    {
+      "id": "th-m1-011",
+      "level": "medium",
+      "sublevel": "medium-1",
+      "sourceRefs": ["peace-corps-thai:lesson-10"],
+      "topics": ["food"],
+      "text": "อิ่มแล้วครับ",
+      "tokens": ["อิ่ม", "แล้ว", "ครับ"],
+      "gloss": "I am full.",
+      "frequencySignal": "high"
+    },
+    {
+      "id": "th-m1-012",
+      "level": "medium",
+      "sublevel": "medium-1",
+      "sourceRefs": ["peace-corps-thai:lesson-9"],
+      "topics": ["ordering", "drinks", "questions"],
+      "text": "เอาน้ำอะไรคะ",
+      "tokens": ["เอา", "น้ำ", "อะไร", "คะ"],
+      "gloss": "What kind of drink do you want?",
+      "frequencySignal": "high"
+    },
+    {
+      "id": "th-m2-001",
+      "level": "medium",
+      "sublevel": "medium-2",
+      "sourceRefs": ["peace-corps-thai:lesson-10"],
+      "topics": ["food", "preferences", "questions"],
+      "text": "คุณชอบกินปลาไหมคะ",
+      "tokens": ["คุณ", "ชอบ", "กิน", "ปลา", "ไหม", "คะ"],
+      "gloss": "Do you like to eat fish?",
+      "frequencySignal": "high"
+    },
+    {
+      "id": "th-m2-002",
+      "level": "medium",
+      "sublevel": "medium-2",
+      "sourceRefs": ["peace-corps-thai:lesson-10"],
+      "topics": ["food", "preferences"],
+      "text": "ผมไม่ชอบกินปลาครับ",
+      "tokens": ["ผม", "ไม่", "ชอบ", "กิน", "ปลา", "ครับ"],
+      "gloss": "I do not like to eat fish.",
+      "frequencySignal": "high"
+    },
+    {
+      "id": "th-m2-003",
+      "level": "medium",
+      "sublevel": "medium-2",
+      "sourceRefs": ["peace-corps-thai:lesson-10"],
+      "topics": ["food", "preferences"],
+      "text": "ดิฉันไม่กินหมูค่ะ",
+      "tokens": ["ดิฉัน", "ไม่", "กิน", "หมู", "ค่ะ"],
+      "gloss": "I do not eat pork.",
+      "frequencySignal": "medium"
+    },
+    {
+      "id": "th-m2-004",
+      "level": "medium",
+      "sublevel": "medium-2",
+      "sourceRefs": ["peace-corps-thai:lesson-10"],
+      "topics": ["food", "ability", "questions"],
+      "text": "คุณกินอาหารเผ็ดได้ไหมคะ",
+      "tokens": ["คุณ", "กิน", "อาหาร", "เผ็ด", "ได้", "ไหม", "คะ"],
+      "gloss": "Can you eat spicy food?",
+      "frequencySignal": "high"
+    },
+    {
+      "id": "th-m2-005",
+      "level": "medium",
+      "sublevel": "medium-2",
+      "sourceRefs": ["peace-corps-thai:lesson-10"],
+      "topics": ["food", "ability"],
+      "text": "ผมกินอาหารเผ็ดได้ครับ",
+      "tokens": ["ผม", "กิน", "อาหาร", "เผ็ด", "ได้", "ครับ"],
+      "gloss": "I can eat spicy food.",
+      "frequencySignal": "high"
+    },
+    {
+      "id": "th-m2-006",
+      "level": "medium",
+      "sublevel": "medium-2",
+      "sourceRefs": ["peace-corps-thai:lesson-10"],
+      "topics": ["food", "allergies"],
+      "text": "ดิฉันแพ้อาหารทะเลค่ะ",
+      "tokens": ["ดิฉัน", "แพ้", "อาหาร", "ทะเล", "ค่ะ"],
+      "gloss": "I am allergic to seafood.",
+      "frequencySignal": "medium"
+    },
+    {
+      "id": "th-m2-007",
+      "level": "medium",
+      "sublevel": "medium-2",
+      "sourceRefs": ["peace-corps-thai:lesson-11"],
+      "topics": ["family", "numbers"],
+      "text": "ครอบครัวของผมมีห้าคนครับ",
+      "tokens": ["ครอบครัว", "ของ", "ผม", "มี", "ห้า", "คน", "ครับ"],
+      "gloss": "There are five people in my family.",
+      "frequencySignal": "medium"
+    },
+    {
+      "id": "th-m2-008",
+      "level": "medium",
+      "sublevel": "medium-2",
+      "sourceRefs": ["peace-corps-thai:lesson-11"],
+      "topics": ["family", "questions"],
+      "text": "คุณมีพี่น้องกี่คนคะ",
+      "tokens": ["คุณ", "มี", "พี่น้อง", "กี่", "คน", "คะ"],
+      "gloss": "How many siblings do you have?",
+      "frequencySignal": "medium"
+    },
+    {
+      "id": "th-m2-009",
+      "level": "medium",
+      "sublevel": "medium-2",
+      "sourceRefs": ["peace-corps-thai:lesson-11"],
+      "topics": ["family", "numbers"],
+      "text": "ผมมีพี่น้องหกคนครับ",
+      "tokens": ["ผม", "มี", "พี่น้อง", "หก", "คน", "ครับ"],
+      "gloss": "I have six siblings.",
+      "frequencySignal": "medium"
+    },
+    {
+      "id": "th-m2-010",
+      "level": "medium",
+      "sublevel": "medium-2",
+      "sourceRefs": ["peace-corps-thai:lesson-11"],
+      "topics": ["family", "age", "questions"],
+      "text": "แม่ของคุณอายุเท่าไรครับ",
+      "tokens": ["แม่", "ของ", "คุณ", "อายุ", "เท่าไร", "ครับ"],
+      "gloss": "How old is your mother?",
+      "frequencySignal": "medium"
+    },
+    {
+      "id": "th-m2-011",
+      "level": "medium",
+      "sublevel": "medium-2",
+      "sourceRefs": ["peace-corps-thai:lesson-11"],
+      "topics": ["family", "age"],
+      "text": "แม่ของดิฉันอายุห้าสิบแปดปีค่ะ",
+      "tokens": ["แม่", "ของ", "ดิฉัน", "อายุ", "ห้าสิบแปด", "ปี", "ค่ะ"],
+      "gloss": "My mother is fifty-eight years old.",
+      "frequencySignal": "medium"
+    },
+    {
+      "id": "th-m2-012",
+      "level": "medium",
+      "sublevel": "medium-2",
+      "sourceRefs": ["peace-corps-thai:lesson-11"],
+      "topics": ["family", "identity"],
+      "text": "น้องสาวของผมชื่อน้อยครับ",
+      "tokens": ["น้องสาว", "ของ", "ผม", "ชื่อ", "น้อย", "ครับ"],
+      "gloss": "My younger sister's name is Noi.",
+      "frequencySignal": "medium"
+    },
+    {
+      "id": "th-d1-001",
+      "level": "difficult",
+      "sublevel": "difficult-1",
+      "sourceRefs": ["peace-corps-thai:lesson-12"],
+      "topics": ["wishes"],
+      "text": "ผมอยากจะอาบน้ำครับ",
+      "tokens": ["ผม", "อยาก", "จะ", "อาบน้ำ", "ครับ"],
+      "gloss": "I want to take a shower.",
+      "frequencySignal": "medium"
+    },
+    {
+      "id": "th-d1-002",
+      "level": "difficult",
+      "sublevel": "difficult-1",
+      "sourceRefs": ["peace-corps-thai:lesson-12"],
+      "topics": ["wishes"],
+      "text": "ดิฉันอยากจะไปเดินเล่นค่ะ",
+      "tokens": ["ดิฉัน", "อยาก", "จะ", "ไป", "เดินเล่น", "ค่ะ"],
+      "gloss": "I want to go for a walk.",
+      "frequencySignal": "medium"
+    },
+    {
+      "id": "th-d1-003",
+      "level": "difficult",
+      "sublevel": "difficult-1",
+      "sourceRefs": ["peace-corps-thai:lesson-12"],
+      "topics": ["places", "permission", "questions"],
+      "text": "ผมไปตลาดได้ไหมครับ",
+      "tokens": ["ผม", "ไป", "ตลาด", "ได้", "ไหม", "ครับ"],
+      "gloss": "May I go to the market?",
+      "frequencySignal": "high"
+    },
+    {
+      "id": "th-d1-004",
+      "level": "difficult",
+      "sublevel": "difficult-1",
+      "sourceRefs": ["peace-corps-thai:lesson-12"],
+      "topics": ["places", "wishes"],
+      "text": "ผมอยากจะไปโรงเรียนครับ",
+      "tokens": ["ผม", "อยาก", "จะ", "ไป", "โรงเรียน", "ครับ"],
+      "gloss": "I want to go to school.",
+      "frequencySignal": "medium"
+    },
+    {
+      "id": "th-d1-005",
+      "level": "difficult",
+      "sublevel": "difficult-1",
+      "sourceRefs": ["peace-corps-thai:lesson-12"],
+      "topics": ["places", "wishes", "health"],
+      "text": "ดิฉันอยากจะไปโรงพยาบาลค่ะ",
+      "tokens": ["ดิฉัน", "อยาก", "จะ", "ไป", "โรงพยาบาล", "ค่ะ"],
+      "gloss": "I want to go to the hospital.",
+      "frequencySignal": "medium"
+    },
+    {
+      "id": "th-d1-006",
+      "level": "difficult",
+      "sublevel": "difficult-1",
+      "sourceRefs": ["peace-corps-thai:lesson-13"],
+      "topics": ["communication"],
+      "text": "ดิฉันไม่เข้าใจค่ะ",
+      "tokens": ["ดิฉัน", "ไม่", "เข้าใจ", "ค่ะ"],
+      "gloss": "I do not understand.",
+      "frequencySignal": "medium"
+    },
+    {
+      "id": "th-d1-007",
+      "level": "difficult",
+      "sublevel": "difficult-1",
+      "sourceRefs": ["peace-corps-thai:lesson-13"],
+      "topics": ["communication", "questions"],
+      "text": "คุณพูดภาษาอังกฤษได้ไหมครับ",
+      "tokens": ["คุณ", "พูด", "ภาษา", "อังกฤษ", "ได้", "ไหม", "ครับ"],
+      "gloss": "Can you speak English?",
+      "frequencySignal": "medium"
+    },
+    {
+      "id": "th-d1-008",
+      "level": "difficult",
+      "sublevel": "difficult-1",
+      "sourceRefs": ["peace-corps-thai:lesson-13"],
+      "topics": ["communication"],
+      "text": "พูดอีกทีสิคะ",
+      "tokens": ["พูด", "อีก", "ที", "สิ", "คะ"],
+      "gloss": "Please repeat.",
+      "frequencySignal": "medium"
+    },
+    {
+      "id": "th-d1-009",
+      "level": "difficult",
+      "sublevel": "difficult-1",
+      "sourceRefs": ["peace-corps-thai:lesson-13"],
+      "topics": ["communication"],
+      "text": "ผมไม่เข้าใจครับ",
+      "tokens": ["ผม", "ไม่", "เข้าใจ", "ครับ"],
+      "gloss": "I do not understand.",
+      "frequencySignal": "high"
+    },
+    {
+      "id": "th-d1-010",
+      "level": "difficult",
+      "sublevel": "difficult-1",
+      "sourceRefs": ["peace-corps-thai:lesson-13"],
+      "topics": ["communication", "questions"],
+      "text": "คุณพูดภาษาอังกฤษได้ไหมคะ",
+      "tokens": ["คุณ", "พูด", "ภาษา", "อังกฤษ", "ได้", "ไหม", "คะ"],
+      "gloss": "Can you speak English?",
+      "frequencySignal": "medium"
+    },
+    {
+      "id": "th-d1-011",
+      "level": "difficult",
+      "sublevel": "difficult-1",
+      "sourceRefs": ["peace-corps-thai:lesson-13"],
+      "topics": ["communication"],
+      "text": "พูดอีกทีสิครับ",
+      "tokens": ["พูด", "อีก", "ที", "สิ", "ครับ"],
+      "gloss": "Please repeat.",
+      "frequencySignal": "medium"
+    },
+    {
+      "id": "th-d1-012",
+      "level": "difficult",
+      "sublevel": "difficult-1",
+      "sourceRefs": ["peace-corps-thai:lesson-13"],
+      "topics": ["communication"],
+      "text": "พูดช้าๆหน่อยค่ะ",
+      "tokens": ["พูด", "ช้าๆ", "หน่อย", "ค่ะ"],
+      "gloss": "Speak slowly please.",
+      "frequencySignal": "medium"
+    },
+    {
+      "id": "th-d2-001",
+      "level": "difficult",
+      "sublevel": "difficult-2",
+      "sourceRefs": ["peace-corps-thai:lesson-13"],
+      "topics": ["communication"],
+      "text": "พูดดังๆหน่อยครับ",
+      "tokens": ["พูด", "ดังๆ", "หน่อย", "ครับ"],
+      "gloss": "Speak louder please.",
+      "frequencySignal": "medium"
+    },
+    {
+      "id": "th-d2-002",
+      "level": "difficult",
+      "sublevel": "difficult-2",
+      "sourceRefs": ["peace-corps-thai:lesson-13"],
+      "topics": ["help", "questions"],
+      "text": "ให้ผมช่วยไหมครับ",
+      "tokens": ["ให้", "ผม", "ช่วย", "ไหม", "ครับ"],
+      "gloss": "May I help?",
+      "frequencySignal": "high"
+    },
+    {
+      "id": "th-d2-003",
+      "level": "difficult",
+      "sublevel": "difficult-2",
+      "sourceRefs": ["peace-corps-thai:lesson-13"],
+      "topics": ["help", "questions"],
+      "text": "ให้ดิฉันช่วยไหมคะ",
+      "tokens": ["ให้", "ดิฉัน", "ช่วย", "ไหม", "คะ"],
+      "gloss": "May I help?",
+      "frequencySignal": "high"
+    },
+    {
+      "id": "th-d2-004",
+      "level": "difficult",
+      "sublevel": "difficult-2",
+      "sourceRefs": ["peace-corps-thai:lesson-13"],
+      "topics": ["health", "directions"],
+      "text": "พาผมไปโรงพยาบาลหน่อยครับ",
+      "tokens": ["พา", "ผม", "ไป", "โรงพยาบาล", "หน่อย", "ครับ"],
+      "gloss": "Please take me to the hospital.",
+      "frequencySignal": "medium"
+    },
+    {
+      "id": "th-d2-005",
+      "level": "difficult",
+      "sublevel": "difficult-2",
+      "sourceRefs": ["peace-corps-thai:lesson-13"],
+      "topics": ["health", "directions"],
+      "text": "พาดิฉันไปโรงพยาบาลหน่อยค่ะ",
+      "tokens": ["พา", "ดิฉัน", "ไป", "โรงพยาบาล", "หน่อย", "ค่ะ"],
+      "gloss": "Please take me to the hospital.",
+      "frequencySignal": "medium"
+    },
+    {
+      "id": "th-d2-006",
+      "level": "difficult",
+      "sublevel": "difficult-2",
+      "sourceRefs": ["peace-corps-thai:lesson-10"],
+      "topics": ["food", "ability", "allergies"],
+      "text": "ผมกินกุ้งไม่ได้ครับ",
+      "tokens": ["ผม", "กิน", "กุ้ง", "ไม่", "ได้", "ครับ"],
+      "gloss": "I cannot eat shrimp.",
+      "frequencySignal": "high"
+    },
+    {
+      "id": "th-d2-007",
+      "level": "difficult",
+      "sublevel": "difficult-2",
+      "sourceRefs": ["peace-corps-thai:lesson-10"],
+      "topics": ["food", "allergies"],
+      "text": "ผมแพ้อาหารทะเลครับ",
+      "tokens": ["ผม", "แพ้", "อาหาร", "ทะเล", "ครับ"],
+      "gloss": "I am allergic to seafood.",
+      "frequencySignal": "medium"
+    },
+    {
+      "id": "th-d2-008",
+      "level": "difficult",
+      "sublevel": "difficult-2",
+      "sourceRefs": ["peace-corps-thai:lesson-10"],
+      "topics": ["food", "preferences", "questions"],
+      "text": "คุณชอบกินอะไรคะ",
+      "tokens": ["คุณ", "ชอบ", "กิน", "อะไร", "คะ"],
+      "gloss": "What do you like to eat?",
+      "frequencySignal": "high"
+    },
+    {
+      "id": "th-d2-009",
+      "level": "difficult",
+      "sublevel": "difficult-2",
+      "sourceRefs": ["peace-corps-thai:lesson-10"],
+      "topics": ["food", "preferences"],
+      "text": "ผมชอบกินไก่ทอดครับ",
+      "tokens": ["ผม", "ชอบ", "กิน", "ไก่", "ทอด", "ครับ"],
+      "gloss": "I like to eat fried chicken.",
+      "frequencySignal": "high"
+    },
+    {
+      "id": "th-d2-010",
+      "level": "difficult",
+      "sublevel": "difficult-2",
+      "sourceRefs": ["peace-corps-thai:lesson-10"],
+      "topics": ["food", "opinions"],
+      "text": "ไก่ทอดอร่อยมากครับ",
+      "tokens": ["ไก่", "ทอด", "อร่อย", "มาก", "ครับ"],
+      "gloss": "Fried chicken is very delicious.",
+      "frequencySignal": "medium"
+    },
+    {
+      "id": "th-d2-011",
+      "level": "difficult",
+      "sublevel": "difficult-2",
+      "sourceRefs": ["peace-corps-thai:lesson-10"],
+      "topics": ["food", "ordering", "questions"],
+      "text": "เอาไก่ทอดอีกไหมคะ",
+      "tokens": ["เอา", "ไก่", "ทอด", "อีก", "ไหม", "คะ"],
+      "gloss": "Do you want more fried chicken?",
+      "frequencySignal": "high"
+    },
+    {
+      "id": "th-d2-012",
+      "level": "difficult",
+      "sublevel": "difficult-2",
+      "sourceRefs": ["peace-corps-thai:lesson-10"],
+      "topics": ["food"],
+      "text": "พอแล้วครับผมอิ่มแล้วครับ",
+      "tokens": ["พอ", "แล้ว", "ครับ", "ผม", "อิ่ม", "แล้ว", "ครับ"],
+      "gloss": "That's enough. I am full.",
+      "frequencySignal": "high"
+    }
+  ]
+}
