@@ -1957,8 +1957,46 @@ function getBoundaryOffsets(tokens) {
 }
 
 function measureText(text, fontSize) {
+  return measureThaiText(text, fontSize).width;
+}
+
+function getMetricValue(value, fallback) {
+  return Number.isFinite(value) && value > 0 ? value : fallback;
+}
+
+function measureThaiText(text, fontSize) {
   ctx.font = thaiFont(fontSize);
-  return ctx.measureText(text).width;
+  const metrics = ctx.measureText(text);
+
+  return {
+    width: metrics.width,
+    ascent: getMetricValue(metrics.actualBoundingBoxAscent, fontSize * 1.05),
+    descent: getMetricValue(metrics.actualBoundingBoxDescent, fontSize * 0.32)
+  };
+}
+
+function getItemHorizontalPadding(fontSize) {
+  return clamp(fontSize * 0.36, 12, 22);
+}
+
+function getItemVerticalPadding(fontSize) {
+  return clamp(fontSize * 0.2, 10, 16);
+}
+
+function getItemTextLayout(text, fontSize) {
+  const metrics = measureThaiText(text, fontSize);
+  const verticalPadding = getItemVerticalPadding(fontSize);
+  const measuredHeight = metrics.ascent + metrics.descent + verticalPadding * 2;
+  const minimumHeight = clamp(fontSize * 1.62, 58, 96);
+
+  return {
+    textWidth: metrics.width,
+    textAscent: metrics.ascent,
+    textDescent: metrics.descent,
+    verticalPadding,
+    baselineOffset: (metrics.ascent - metrics.descent) / 2,
+    height: Math.ceil(Math.max(measuredHeight, minimumHeight))
+  };
 }
 
 function baseFontSize() {
@@ -1969,14 +2007,14 @@ function baseFontSize() {
 
 function measureChallenge(tokens, fontSize) {
   const text = tokens.join("");
-  const textWidth = measureText(text, fontSize);
+  const layout = getItemTextLayout(text, fontSize);
   const boundaryOffsets = getBoundaryOffsets(tokens);
   const prefixWidths = boundaryOffsets.map((offset) => measureText(text.slice(0, offset), fontSize));
 
   return {
     text,
     tokens,
-    textWidth,
+    ...layout,
     boundaryOffsets,
     prefixWidths,
     boundaryCount: boundaryOffsets.length
@@ -2051,8 +2089,7 @@ function spawnItem() {
   if (!gameRunning) return;
 
   const challenge = createChallenge();
-  const padding = clamp(challenge.fontSize * 0.36, 12, 22);
-  const height = clamp(challenge.fontSize * 1.42, 50, 78);
+  const padding = getItemHorizontalPadding(challenge.fontSize);
   const width = challenge.textWidth + padding * 2;
   const x = getNextSpawnX();
 
@@ -2062,8 +2099,10 @@ function spawnItem() {
     x,
     y: scene.beltY - scene.beltHeight * 0.72,
     width,
-    height,
+    height: challenge.height,
     padding,
+    verticalPadding: challenge.verticalPadding,
+    baselineOffset: challenge.baselineOffset,
     speed: getCurrentSpeed(),
     flash: 0,
     lastWrongAt: 0
@@ -2150,6 +2189,8 @@ function addActiveItemAfter(sourceItem, tokens, x) {
     width: 0,
     height: sourceItem.height,
     padding: sourceItem.padding,
+    verticalPadding: sourceItem.verticalPadding,
+    baselineOffset: sourceItem.baselineOffset,
     speed: sourceItem.speed,
     flash: 0,
     lastWrongAt: 0
@@ -2216,6 +2257,9 @@ function updateItemText(item, tokens, x) {
   item.tokens = measured.tokens;
   item.text = measured.text;
   item.textWidth = measured.textWidth;
+  item.height = measured.height;
+  item.verticalPadding = measured.verticalPadding;
+  item.baselineOffset = measured.baselineOffset;
   item.boundaryOffsets = measured.boundaryOffsets;
   item.prefixWidths = measured.prefixWidths;
   item.boundaryCount = measured.boundaryCount;
@@ -2283,6 +2327,7 @@ function addMissedPhrase(item, boundaryX) {
     width: item.width,
     height: item.height,
     padding: item.padding,
+    baselineOffset: item.baselineOffset,
     missed: true
   });
 }
@@ -2312,9 +2357,10 @@ function addRobotArmRemoval(phrase) {
 
   const fontSize = activeItems[0]?.fontSize ?? baseFontSize();
   const text = phrase.displayText || activeItems.map((item) => item.text).join("");
-  const padding = clamp(fontSize * 0.36, 12, 22);
-  const width = Math.max(bounds.right - bounds.left, measureText(text, fontSize) + padding * 2);
-  const height = activeItems[0]?.height ?? clamp(fontSize * 1.42, 50, 78);
+  const padding = getItemHorizontalPadding(fontSize);
+  const layout = getItemTextLayout(text, fontSize);
+  const width = Math.max(bounds.right - bounds.left, layout.textWidth + padding * 2);
+  const height = Math.max(bounds.bottom - bounds.top, activeItems[0]?.height ?? 0, layout.height);
   const startX = bounds.left + (bounds.right - bounds.left) / 2 - width / 2;
   const startY = (bounds.top + bounds.bottom) / 2;
 
@@ -2329,6 +2375,8 @@ function addRobotArmRemoval(phrase) {
     width,
     height,
     padding,
+    verticalPadding: layout.verticalPadding,
+    baselineOffset: layout.baselineOffset,
     fontSize,
     elapsed: 0,
     duration: ROBOT_ARM_DURATION
@@ -2976,9 +3024,9 @@ function drawRobotArmCarries() {
     ctx.stroke();
 
     ctx.font = thaiFont(carry.fontSize);
-    ctx.textBaseline = "middle";
+    ctx.textBaseline = "alphabetic";
     ctx.fillStyle = "#111827";
-    ctx.fillText(carry.text, pose.x + carry.padding, pose.y + 1);
+    ctx.fillText(carry.text, pose.x + carry.padding, pose.y + carry.baselineOffset);
 
     ctx.restore();
   }
@@ -3009,9 +3057,9 @@ function drawItem(item) {
   ctx.stroke();
 
   ctx.font = thaiFont(item.fontSize);
-  ctx.textBaseline = "middle";
+  ctx.textBaseline = "alphabetic";
   ctx.fillStyle = "#111827";
-  ctx.fillText(item.text, item.x + item.padding + drawOffsetX, item.y + 1);
+  ctx.fillText(item.text, item.x + item.padding + drawOffsetX, item.y + item.baselineOffset);
   ctx.restore();
 }
 
@@ -3105,9 +3153,9 @@ function drawMissedFragments() {
       ctx.stroke();
 
       ctx.font = thaiFont(fragment.fontSize);
-      ctx.textBaseline = "middle";
+      ctx.textBaseline = "alphabetic";
       ctx.fillStyle = fragment.color;
-      ctx.fillText(fragment.text, -fragment.width / 2 + fragment.padding, 1);
+      ctx.fillText(fragment.text, -fragment.width / 2 + fragment.padding, fragment.baselineOffset);
     } else {
       ctx.translate(fragment.x, fragment.y);
       ctx.rotate(fragment.rotation);
