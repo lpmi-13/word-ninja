@@ -67,20 +67,21 @@ canvas {
 
 .hud-badge {
   position: absolute;
-  min-width: 118px;
+  min-width: 132px;
   border: 1px solid var(--line);
   border-radius: 8px;
   background: var(--panel);
   color: #ffffff;
-  font-size: 18px;
+  font-size: 20px;
   font-weight: 800;
   line-height: 1.15;
-  padding: 10px 14px;
+  padding: 12px 16px;
   box-shadow: 0 8px 22px rgba(15, 23, 42, 0.18);
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
 }
 
 #score-display {
+  display: none;
   top: max(14px, env(safe-area-inset-top));
   left: max(14px, env(safe-area-inset-left));
   color: var(--gold);
@@ -88,7 +89,7 @@ canvas {
 
 #lives-display {
   top: max(14px, env(safe-area-inset-top));
-  right: max(14px, env(safe-area-inset-right));
+  left: max(14px, env(safe-area-inset-left));
   display: flex;
   align-items: center;
   justify-content: center;
@@ -96,19 +97,29 @@ canvas {
   width: max-content;
   letter-spacing: 1px;
   color: #ff6b6b;
+  font-size: 30px;
+  line-height: 1;
 }
 
 #mode-display {
   left: max(14px, env(safe-area-inset-left));
   bottom: max(14px, env(safe-area-inset-bottom));
-  min-width: 108px;
+  min-width: 156px;
   color: #a7f3d0;
 }
 
+#mode-display .mode-line {
+  display: inline;
+}
+
+#mode-display .mode-detail {
+  margin-left: 0.35em;
+}
+
 #combo-display {
-  top: calc(max(14px, env(safe-area-inset-top)) + 54px);
+  top: calc(max(14px, env(safe-area-inset-top)) + 62px);
   left: max(14px, env(safe-area-inset-left));
-  min-width: 96px;
+  min-width: 112px;
   color: #fcbf49;
   opacity: 0;
   transform: translateY(-4px);
@@ -141,11 +152,11 @@ canvas {
 .hud-icon-button {
   position: absolute;
   right: max(14px, env(safe-area-inset-right));
-  bottom: max(14px, env(safe-area-inset-bottom));
+  top: max(14px, env(safe-area-inset-top));
   z-index: 11;
   display: none;
-  width: 44px;
-  height: 44px;
+  width: 52px;
+  height: 52px;
   border: 1px solid var(--line);
   border-radius: 8px;
   background: var(--panel);
@@ -160,7 +171,7 @@ canvas {
 
 .hud-icon-button span {
   display: block;
-  width: 20px;
+  width: 24px;
   height: 3px;
   border-radius: 999px;
   background: #ffffff;
@@ -473,18 +484,37 @@ h1 {
 
 @media (max-width: 520px) {
   .hud-badge {
-    min-width: 88px;
-    padding: 8px 10px;
-    font-size: 15px;
+    min-width: 116px;
+    padding: 11px 14px;
+    font-size: 18px;
+  }
+
+  #lives-display {
+    font-size: 20px;
   }
 
   #combo-display {
-    top: calc(max(14px, env(safe-area-inset-top)) + 46px);
+    top: calc(max(14px, env(safe-area-inset-top)) + 64px);
   }
 
   .hud-icon-button {
-    width: 40px;
-    height: 40px;
+    width: 48px;
+    height: 48px;
+  }
+
+  #mode-display {
+    min-width: 176px;
+  }
+
+  #mode-display .mode-line {
+    display: block;
+  }
+
+  #mode-display .mode-detail {
+    margin-top: 4px;
+    margin-left: 0;
+    font-size: 16px;
+    opacity: 0.92;
   }
 
   .level-selector {
@@ -1225,6 +1255,29 @@ function getStageHudText(stage, options = {}) {
   return `${stage.id} ${stage.label} ${getStageRatioText(stage, options)}`;
 }
 
+function getStageHudParts(stage, options = {}) {
+  return {
+    title: `${stage.id} ${stage.label}`,
+    detail: getStageRatioText(stage, options)
+  };
+}
+
+function setModeDisplay(title, detail = "") {
+  const line = document.createElement("span");
+  line.className = "mode-line";
+  line.textContent = title;
+
+  if (!detail) {
+    modeEl.replaceChildren(line);
+    return;
+  }
+
+  const detailEl = document.createElement("span");
+  detailEl.className = "mode-line mode-detail";
+  detailEl.textContent = detail;
+  modeEl.replaceChildren(line, detailEl);
+}
+
 function getStageSelectorDetail(stage, mastered) {
   if (mastered) return "Mastered";
 
@@ -1529,18 +1582,23 @@ function updateUI() {
   livesEl.textContent = `${"♥".repeat(lives)}${"♡".repeat(Math.max(0, 3 - lives))}`;
   const completedStage = getActiveStageCompletionStage();
   if (completedStage) {
-    modeEl.textContent = getStageHudText(completedStage);
+    const hud = getStageHudParts(completedStage);
+    setModeDisplay(hud.title, hud.detail);
   } else if (stage?.masteryStage) {
     const run = masteryRun?.level === selectedLevel ? masteryRun : { streak: 0, wrong: 0 };
     const cleanCount = Math.min(run.streak, MASTERY_REQUIRED_CLEAN_PHRASES);
     const wrongCount = Math.min(run.wrong, MASTERY_WRONG_ATTEMPT_LIMIT);
-    modeEl.textContent = `${stage.id} ${cleanCount}/${MASTERY_REQUIRED_CLEAN_PHRASES} clean ${wrongCount}/${MASTERY_WRONG_ATTEMPT_LIMIT}`;
+    setModeDisplay(
+      `${stage.id} ${cleanCount}/${MASTERY_REQUIRED_CLEAN_PHRASES} clean`,
+      `${wrongCount}/${MASTERY_WRONG_ATTEMPT_LIMIT} strikes`
+    );
   } else if (stage) {
     const activeStage = getCurrentPracticePhraseStage();
     const hudStage = activeStage?.level === selectedLevel ? activeStage : stage;
-    modeEl.textContent = getStageHudText(hudStage, { includeCurrentPhrase: true });
+    const hud = getStageHudParts(hudStage, { includeCurrentPhrase: true });
+    setModeDisplay(hud.title, hud.detail);
   } else {
-    modeEl.textContent = `${cfg.label} ${cfg.cefrLikeLevel ?? ""}`.trim();
+    setModeDisplay(`${cfg.label} ${cfg.cefrLikeLevel ?? ""}`.trim());
   }
 
   if (combo > 1) {
