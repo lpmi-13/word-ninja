@@ -779,8 +779,7 @@ const CURRICULUM = {
   }
 };
 
-const STAGE_TARGET_ACCURACY = 0.8;
-const STRETCH_UNLOCK_SEEN = 5;
+const STRETCH_UNLOCK_CLEARED = 5;
 const STRETCH_UNLOCK_ACCURACY = 0.75;
 const CELEBRATION_COLORS = ["#ffd166", "#ef476f", "#24a66a", "#118ab2", "#fffaf0"];
 const CELEBRATION_DURATIONS = {
@@ -1184,35 +1183,53 @@ function getStageAccuracy(stageId) {
 }
 
 function getStageCompletion(stage) {
+  return clamp(getDisplayedStageCleared(stage) / stage.targetSeen, 0, 1);
+}
+
+function getDisplayedStageCleared(stage) {
   const progress = getStageProgress(stage.id);
-  return clamp(progress.seen / stage.targetSeen, 0, 1);
+  return Math.min(progress.cleared, stage.targetSeen);
 }
 
-function getDisplayedStageSeen(stage) {
-  const progress = getStageProgress(stage.id);
-  return Math.min(progress.seen, stage.targetSeen);
+function getCurrentPracticePhraseStage() {
+  if (
+    currentPhrase?.mode !== "practice"
+    || currentPhrase.resolved
+    || !currentPhrase.stageId
+  ) {
+    return null;
+  }
+
+  return getStageById(currentPhrase.stageId);
 }
 
-function getStageRatioText(stage, allowComplete = false) {
-  const seen = getDisplayedStageSeen(stage);
-  if (seen >= stage.targetSeen && !allowComplete) return "";
-  return `${seen}/${stage.targetSeen}`;
+function isCurrentPracticePhraseForStage(stage) {
+  return currentPhrase?.mode === "practice"
+    && !currentPhrase.resolved
+    && currentPhrase.stageId === stage.id;
 }
 
-function getStageHudText(stage, allowCompleteRatio = false) {
-  const ratioText = getStageRatioText(stage, allowCompleteRatio);
-  return `${stage.id} ${stage.label}${ratioText ? ` ${ratioText}` : ""}`;
+function getDisplayedStageRatioCount(stage, includeCurrentPhrase = false) {
+  const cleared = getDisplayedStageCleared(stage);
+  const activePhrase = includeCurrentPhrase && isCurrentPracticePhraseForStage(stage) ? 1 : 0;
+  return Math.min(cleared + activePhrase, stage.targetSeen);
+}
+
+function getStageRatioText(stage, options = {}) {
+  const includeCurrentPhrase = options.includeCurrentPhrase === true;
+  const count = getDisplayedStageRatioCount(stage, includeCurrentPhrase);
+  return `${count}/${stage.targetSeen}`;
+}
+
+function getStageHudText(stage, options = {}) {
+  return `${stage.id} ${stage.label} ${getStageRatioText(stage, options)}`;
 }
 
 function getStageSelectorDetail(stage, mastered) {
   if (mastered) return "Mastered";
 
   const ratioText = getStageRatioText(stage);
-  if (ratioText) {
-    return `${ratioText} ${Math.round(getStageCompletion(stage) * 100)}%`;
-  }
-
-  return `Accuracy ${Math.round(getStageAccuracy(stage.id) * 100)}%`;
+  return `${ratioText} ${Math.round(getStageCompletion(stage) * 100)}%`;
 }
 
 function getActiveStageCompletionStage(level = selectedLevel) {
@@ -1229,10 +1246,7 @@ function isStageMastered(stage) {
   if (stage?.masteryStage) return isLevelMasteryPassed(stage.level);
 
   const progress = getStageProgress(stage.id);
-  return progress.mastered || (
-    progress.seen >= stage.targetSeen
-    && getStageAccuracy(stage.id) >= STAGE_TARGET_ACCURACY
-  );
+  return progress.mastered || getDisplayedStageCleared(stage) >= stage.targetSeen;
 }
 
 function areLevelStagesMastered(level) {
@@ -1515,14 +1529,16 @@ function updateUI() {
   livesEl.textContent = `${"♥".repeat(lives)}${"♡".repeat(Math.max(0, 3 - lives))}`;
   const completedStage = getActiveStageCompletionStage();
   if (completedStage) {
-    modeEl.textContent = getStageHudText(completedStage, true);
+    modeEl.textContent = getStageHudText(completedStage);
   } else if (stage?.masteryStage) {
     const run = masteryRun?.level === selectedLevel ? masteryRun : { streak: 0, wrong: 0 };
     const cleanCount = Math.min(run.streak, MASTERY_REQUIRED_CLEAN_PHRASES);
     const wrongCount = Math.min(run.wrong, MASTERY_WRONG_ATTEMPT_LIMIT);
     modeEl.textContent = `${stage.id} ${cleanCount}/${MASTERY_REQUIRED_CLEAN_PHRASES} clean ${wrongCount}/${MASTERY_WRONG_ATTEMPT_LIMIT}`;
   } else if (stage) {
-    modeEl.textContent = getStageHudText(stage);
+    const activeStage = getCurrentPracticePhraseStage();
+    const hudStage = activeStage?.level === selectedLevel ? activeStage : stage;
+    modeEl.textContent = getStageHudText(hudStage, { includeCurrentPhrase: true });
   } else {
     modeEl.textContent = `${cfg.label} ${cfg.cefrLikeLevel ?? ""}`.trim();
   }
@@ -1577,8 +1593,7 @@ function getReviewEntries(stage) {
 }
 
 function canStretchFromStage(stage) {
-  const progress = getStageProgress(stage.id);
-  return progress.seen >= STRETCH_UNLOCK_SEEN
+  return getDisplayedStageCleared(stage) >= STRETCH_UNLOCK_CLEARED
     && getStageAccuracy(stage.id) >= STRETCH_UNLOCK_ACCURACY;
 }
 
@@ -1601,7 +1616,6 @@ function chooseWeightedStagePool(stage) {
     const nextStage = getStages(stage.level)[getStageIndex(stage.level, stage.id) + 1];
     return {
       pool: stretchPool,
-      stageId: nextStage.id,
       poolKey: `stretch:${stage.id}:${nextStage.id}`
     };
   }
@@ -1609,23 +1623,14 @@ function chooseWeightedStagePool(stage) {
   if (reviewPool.length > 0 && roll < 0.3) {
     return {
       pool: reviewPool,
-      stageId: null,
       poolKey: `review:${stage.level}:${stage.id}`
     };
   }
 
   return {
     pool: currentPool,
-    stageId: stage.id,
     poolKey: `stage:${stage.id}`
   };
-}
-
-function findStageForEntry(entry, fallbackStage) {
-  const stage = getStages(fallbackStage.level).find((candidate) => {
-    return entryMatchesStage(entry, { ...candidate, level: fallbackStage.level });
-  });
-  return stage ? { ...stage, level: fallbackStage.level } : fallbackStage;
 }
 
 function shuffleEntryIds(entries) {
@@ -1719,31 +1724,14 @@ function pickEntry() {
     };
   }
 
-  let { pool, stageId, poolKey } = chooseWeightedStagePool(stage);
+  let { pool, poolKey } = chooseWeightedStagePool(stage);
   if (pool.length === 0) {
     pool = entriesByLevel[selectedLevel] ?? corpus.entries;
-    stageId = stage.id;
     poolKey = `fallback:${selectedLevel}:${stage.id}`;
   }
 
   const entry = drawEntryFromDeck(poolKey, pool);
-  const entryStage = stageId
-    ? (getStageById(stageId) ?? stage)
-    : findStageForEntry(entry, stage);
-
-  return { entry, stage: entryStage };
-}
-
-function recordPhraseSeen(stageId) {
-  if (!stageId) return;
-
-  const progress = getStageProgress(stageId);
-  const stage = getStageById(stageId);
-  progress.seen = stage?.targetSeen
-    ? Math.min(progress.seen + 1, stage.targetSeen)
-    : progress.seen + 1;
-  saveProgressState();
-  updateUI();
+  return { entry, stage };
 }
 
 function advanceStageIfMastered(stage) {
@@ -1853,7 +1841,7 @@ function recordPhraseOutcome(outcome) {
 
   const stage = getStageById(currentPhrase.stageId);
   const progress = getStageProgress(currentPhrase.stageId);
-  const wasMastered = progress.mastered;
+  const wasMastered = stage ? isStageMastered(stage) : progress.mastered;
   currentPhrase.resolved = true;
 
   if (outcome === "cleared") {
@@ -1971,9 +1959,8 @@ function startCurrentPhrase(challenge) {
 
   if (isMastery) {
     ensureMasteryRun(challenge.level);
-  } else {
-    recordPhraseSeen(challenge.curriculumStageId);
   }
+  updateUI();
 }
 
 function markPhraseClearedIfDone() {
