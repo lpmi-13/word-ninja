@@ -547,7 +547,7 @@ h1 {
   <div class="menu">
     <h1 id="how-to-title">How to Play</h1>
     <div class="how-to-copy">
-      Draw one clear slash at each real word break before the next break reaches the end of the belt. Practice phrases allow two wrong cuts, then show the answer and move on. Mastery runs need five clean phrases before three strikes.
+      Draw one clear slash at each real word break before the next break reaches the end of the belt. Practice phrases fail on the third wrong cut, then show the answer and move on. Mastery runs show the answer after any wrong cut and need five clean phrases before three strikes.
     </div>
     <button class="btn" id="how-to-dismiss-btn" type="button">Got it</button>
   </div>
@@ -595,7 +595,7 @@ const MOBILE_SPEED_REFERENCE_WIDTH = 1280;
 const LOADING_REVEAL_DELAY = 180;
 const START_BUTTON_LABEL = startButton.textContent;
 const RESTART_BUTTON_LABEL = restartButton.textContent;
-const PRACTICE_WRONG_ATTEMPT_LIMIT = 2;
+const PRACTICE_WRONG_ATTEMPT_LIMIT = 3;
 const MASTERY_REQUIRED_CLEAN_PHRASES = 5;
 const MASTERY_WRONG_ATTEMPT_LIMIT = 3;
 const FEEDBACK_CARD_DURATION = 1850;
@@ -1984,9 +1984,6 @@ function markPhraseClearedIfDone() {
     return;
   }
 
-  if (!currentPhrase.clean) {
-    showPhraseFeedback("Practice only", currentPhrase.answerText, "Clean first cuts count for progress", ANSWER_FEEDBACK_CARD_DURATION);
-  }
   recordPhraseOutcome(currentPhrase.clean ? "cleared" : "missed");
 }
 
