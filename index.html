@@ -547,7 +547,7 @@ h1 {
   <div class="menu">
     <h1 id="how-to-title">How to Play</h1>
     <div class="how-to-copy">
-      Slice each Thai phrase at real word breaks before the next break reaches the end of the belt. Single words get collected in the buckets. A missed phrase costs one heart.
+      Draw one clear slash at each real word break before the next break reaches the end of the belt. Practice phrases allow two wrong cuts, then show the answer and move on. Mastery runs need five clean phrases before three strikes.
     </div>
     <button class="btn" id="how-to-dismiss-btn" type="button">Got it</button>
   </div>
@@ -595,6 +595,11 @@ const MOBILE_SPEED_REFERENCE_WIDTH = 1280;
 const LOADING_REVEAL_DELAY = 180;
 const START_BUTTON_LABEL = startButton.textContent;
 const RESTART_BUTTON_LABEL = restartButton.textContent;
+const PRACTICE_WRONG_ATTEMPT_LIMIT = 2;
+const MASTERY_REQUIRED_CLEAN_PHRASES = 5;
+const MASTERY_WRONG_ATTEMPT_LIMIT = 3;
+const FEEDBACK_CARD_DURATION = 1850;
+const ROBOT_ARM_DURATION = 1450;
 const SIMILARITY_IGNORED_TOKENS = new Set(["ครับ", "ค่ะ", "คะ", "ผม", "ดิฉัน"]);
 const reducedMotionQuery = typeof window.matchMedia === "function"
   ? window.matchMedia("(prefers-reduced-motion: reduce)")
@@ -801,6 +806,8 @@ let particles = [];
 let scorePops = [];
 let celebrationBits = [];
 let completionCelebrations = [];
+let feedbackCards = [];
+let robotArmCarries = [];
 let slashTrail = [];
 let spawnCooldown = 0;
 let lastTime = 0;
@@ -811,6 +818,7 @@ let itemSequence = 0;
 let isPointerDown = false;
 let pointerPath = [];
 let currentPhrase = null;
+let masteryRun = null;
 let progressState = loadProgressState();
 let entriesById = new Map();
 let entryDecks = new Map();
@@ -1034,15 +1042,29 @@ function getStageById(stageId) {
   return null;
 }
 
+function getMasteryStage(level) {
+  const cfg = LEVEL_CONFIG[level];
+  return {
+    id: `${cfg?.cefrLikeLevel ?? level}.M`,
+    label: "Mastery run",
+    level,
+    targetSeen: MASTERY_REQUIRED_CLEAN_PHRASES,
+    masteryStage: true
+  };
+}
+
 function getDefaultProgressState() {
   const currentStageByLevel = {};
+  const levelMastery = {};
   for (const level of Object.keys(CURRICULUM)) {
     currentStageByLevel[level] = CURRICULUM[level].stages[0]?.id ?? "";
+    levelMastery[level] = { passed: false };
   }
   return {
     version: 1,
     currentStageByLevel,
-    stages: {}
+    stages: {},
+    levelMastery
   };
 }
 
@@ -1069,11 +1091,19 @@ function normalizeStageProgress(value) {
   };
 }
 
+function normalizeLevelMasteryProgress(value) {
+  const progress = value && typeof value === "object" ? value : {};
+  return {
+    passed: progress.passed === true
+  };
+}
+
 function normalizeProgressState(parsed, fallback) {
   const currentStageByLevel = { ...fallback.currentStageByLevel };
   const parsedCurrentStages = parsed.currentStageByLevel && typeof parsed.currentStageByLevel === "object"
     ? parsed.currentStageByLevel
     : {};
+  const levelMastery = { ...fallback.levelMastery };
 
   for (const level of Object.keys(CURRICULUM)) {
     const stageId = parsedCurrentStages[level];
@@ -1092,10 +1122,18 @@ function normalizeProgressState(parsed, fallback) {
     }
   }
 
+  const parsedLevelMastery = parsed.levelMastery && typeof parsed.levelMastery === "object"
+    ? parsed.levelMastery
+    : {};
+  for (const level of Object.keys(CURRICULUM)) {
+    levelMastery[level] = normalizeLevelMasteryProgress(parsedLevelMastery[level]);
+  }
+
   return {
     version: 1,
     currentStageByLevel,
-    stages
+    stages,
+    levelMastery
   };
 }
 
@@ -1131,6 +1169,12 @@ function getStageProgress(stageId) {
   return progressState.stages[stageId];
 }
 
+function getLevelMasteryProgress(level) {
+  progressState.levelMastery ??= {};
+  progressState.levelMastery[level] ??= { passed: false };
+  return progressState.levelMastery[level];
+}
+
 function getStageAccuracy(stageId) {
   const progress = getStageProgress(stageId);
   const resolved = progress.cleared + progress.missed;
@@ -1143,6 +1187,8 @@ function getStageCompletion(stage) {
 }
 
 function isStageMastered(stage) {
+  if (stage?.masteryStage) return isLevelMasteryPassed(stage.level);
+
   const progress = getStageProgress(stage.id);
   return progress.mastered || (
     progress.seen >= stage.targetSeen
@@ -1150,9 +1196,17 @@ function isStageMastered(stage) {
   );
 }
 
-function isLevelMastered(level) {
+function areLevelStagesMastered(level) {
   const stages = getStages(level);
   return stages.length > 0 && stages.every((stage) => isStageMastered(stage));
+}
+
+function isLevelMasteryPassed(level) {
+  return getLevelMasteryProgress(level).passed === true;
+}
+
+function isLevelMastered(level) {
+  return areLevelStagesMastered(level) && isLevelMasteryPassed(level);
 }
 
 function isStageUnlocked(level, stageIndex) {
@@ -1186,6 +1240,10 @@ function getCurrentStage(level = selectedLevel) {
     return { ...nextAvailableStage, level };
   }
 
+  if (areLevelStagesMastered(level) && !isLevelMasteryPassed(level)) {
+    return getMasteryStage(level);
+  }
+
   const firstStage = stages[0];
   return firstStage ? { ...firstStage, level } : null;
 }
@@ -1209,6 +1267,7 @@ function entryHasAnyTag(entry, tags) {
 
 function entryMatchesStage(entry, stage) {
   if (!stage || entry.level !== stage.level) return false;
+  if (stage.masteryStage) return true;
 
   const criteria = stage.criteria ?? {};
   if (criteria.generatedOnly && !entryIsGenerated(entry)) return false;
@@ -1334,7 +1393,8 @@ function getLevelCompletion(level) {
   if (stages.length === 0) return 0;
 
   const total = stages.reduce((sum, stage) => sum + getStageCompletion(stage), 0);
-  return total / stages.length;
+  const masteryCompletion = isLevelMasteryPassed(level) ? 1 : 0;
+  return (total + masteryCompletion) / (stages.length + 1);
 }
 
 function renderLevelButtons() {
@@ -1358,7 +1418,11 @@ function renderStageSelector() {
   const meter = document.createElement("div");
   const meterFill = document.createElement("div");
 
-  progressLabel.textContent = `${LEVEL_CONFIG[selectedLevel].cefrLikeLevel} progress ${levelCompletion}%`;
+  const masteryReady = areLevelStagesMastered(selectedLevel);
+  const masteryPassed = isLevelMasteryPassed(selectedLevel);
+  progressLabel.textContent = masteryReady && !masteryPassed
+    ? `${LEVEL_CONFIG[selectedLevel].cefrLikeLevel} mastery: ${masteryRun?.level === selectedLevel ? masteryRun.streak : 0}/${MASTERY_REQUIRED_CLEAN_PHRASES} clean`
+    : `${LEVEL_CONFIG[selectedLevel].cefrLikeLevel} progress ${levelCompletion}%`;
   meter.className = "stage-meter";
   meter.setAttribute("aria-hidden", "true");
   meterFill.className = "stage-meter-fill";
@@ -1386,17 +1450,41 @@ function renderStageSelector() {
     button.append(label, detail);
     stageSelectorEl.append(button);
   });
+
+  const masteryStage = getMasteryStage(selectedLevel);
+  const masteryButton = document.createElement("button");
+  const masteryLabel = document.createTextNode(`${masteryStage.id} ${masteryStage.label}`);
+  const masteryDetail = document.createElement("span");
+
+  masteryButton.type = "button";
+  masteryButton.className = "stage-btn";
+  masteryButton.dataset.mastery = "true";
+  masteryButton.disabled = !masteryReady;
+  masteryButton.classList.toggle("is-active", currentStage?.masteryStage === true);
+  masteryButton.classList.toggle("is-mastered", masteryPassed);
+  masteryDetail.textContent = masteryPassed
+    ? "Mastered"
+    : masteryReady
+      ? `5 clean phrases, ${MASTERY_WRONG_ATTEMPT_LIMIT} strikes`
+      : "Complete sublevels first";
+  masteryButton.append(masteryLabel, masteryDetail);
+  stageSelectorEl.append(masteryButton);
 }
 
 function updateUI() {
   const cfg = LEVEL_CONFIG[selectedLevel];
   const stage = getCurrentStage(selectedLevel);
-  const stageProgress = stage ? getStageProgress(stage.id) : null;
   scoreEl.textContent = `Score ${score}`;
   livesEl.textContent = `${"♥".repeat(lives)}${"♡".repeat(Math.max(0, 3 - lives))}`;
-  modeEl.textContent = stage
-    ? `${stage.id} ${stage.label} ${stageProgress.seen}/${stage.targetSeen}`
-    : `${cfg.label} ${cfg.cefrLikeLevel ?? ""}`.trim();
+  if (stage?.masteryStage) {
+    const run = masteryRun?.level === selectedLevel ? masteryRun : { streak: 0, wrong: 0 };
+    modeEl.textContent = `${stage.id} ${run.streak}/${MASTERY_REQUIRED_CLEAN_PHRASES} clean ${run.wrong}/${MASTERY_WRONG_ATTEMPT_LIMIT}`;
+  } else if (stage) {
+    const stageProgress = getStageProgress(stage.id);
+    modeEl.textContent = `${stage.id} ${stage.label} ${stageProgress.seen}/${stage.targetSeen}`;
+  } else {
+    modeEl.textContent = `${cfg.label} ${cfg.cefrLikeLevel ?? ""}`.trim();
+  }
 
   if (combo > 1) {
     comboEl.textContent = `Combo x${combo}`;
@@ -1574,6 +1662,14 @@ function drawEntryFromDeck(poolKey, pool) {
 
 function pickEntry() {
   const stage = getCurrentStage(selectedLevel);
+  if (stage?.masteryStage) {
+    const masteryPool = entriesByLevel[selectedLevel] ?? corpus.entries;
+    return {
+      entry: drawEntryFromDeck(`mastery:${selectedLevel}`, masteryPool),
+      stage
+    };
+  }
+
   if (!stage) {
     const fallbackPool = entriesByLevel[selectedLevel] ?? corpus.entries;
     return {
@@ -1739,19 +1835,115 @@ function recordPhraseOutcome(outcome) {
   currentPhrase = null;
 }
 
+function ensureMasteryRun(level) {
+  if (!level) return null;
+  if (!masteryRun || masteryRun.level !== level) {
+    masteryRun = {
+      level,
+      streak: 0,
+      wrong: 0
+    };
+  }
+  return masteryRun;
+}
+
+function resetLevelProgress(level) {
+  for (const stage of getStages(level)) {
+    progressState.stages[stage.id] = {
+      seen: 0,
+      cleared: 0,
+      missed: 0,
+      mastered: false,
+      recent: []
+    };
+  }
+
+  progressState.currentStageByLevel[level] = getStages(level)[0]?.id ?? "";
+  getLevelMasteryProgress(level).passed = false;
+  masteryRun = null;
+  entryDecks.clear();
+  lastPickedEntry = null;
+  saveProgressState();
+  updateUI();
+}
+
+function passLevelMastery(level) {
+  const progress = getLevelMasteryProgress(level);
+  progress.passed = true;
+  saveProgressState();
+  queueCompletionCelebration(getMasteryStage(level), "level");
+  showPhraseFeedback("Level mastered", `${LEVEL_CONFIG[level].cefrLikeLevel} ${LEVEL_CONFIG[level].label}`, "Clean run complete");
+  masteryRun = null;
+  updateUI();
+}
+
+function failLevelMastery(level, answerText = "Sublevels reset") {
+  showPhraseFeedback("Mastery failed", answerText, "Sublevels reset; complete the level again");
+  resetLevelProgress(level);
+}
+
+function recordMasteryPhraseOutcome(outcome) {
+  if (!currentPhrase || currentPhrase.resolved || currentPhrase.mode !== "mastery") return;
+
+  const phrase = currentPhrase;
+  const run = ensureMasteryRun(phrase.level);
+  phrase.resolved = true;
+
+  if (outcome === "cleared") {
+    run.streak += 1;
+    if (run.streak >= MASTERY_REQUIRED_CLEAN_PHRASES) {
+      currentPhrase = null;
+      passLevelMastery(phrase.level);
+      return;
+    }
+  } else {
+    run.wrong += 1;
+    run.streak = 0;
+    if (run.wrong >= MASTERY_WRONG_ATTEMPT_LIMIT) {
+      currentPhrase = null;
+      failLevelMastery(phrase.level, phrase.answerText);
+      return;
+    }
+  }
+
+  saveProgressState();
+  updateUI();
+  currentPhrase = null;
+}
+
 function startCurrentPhrase(challenge) {
+  const isMastery = challenge.mastery === true;
   currentPhrase = {
+    mode: isMastery ? "mastery" : "practice",
     stageId: challenge.curriculumStageId,
     sourceId: challenge.sourceId,
+    level: challenge.level,
+    clean: true,
+    wrongAttempts: 0,
+    answerText: challenge.tokens.join("|"),
+    displayText: challenge.text,
     resolved: false
   };
-  recordPhraseSeen(challenge.curriculumStageId);
+
+  if (isMastery) {
+    ensureMasteryRun(challenge.level);
+  } else {
+    recordPhraseSeen(challenge.curriculumStageId);
+  }
 }
 
 function markPhraseClearedIfDone() {
-  if (activeItems.length === 0) {
-    recordPhraseOutcome("cleared");
+  if (activeItems.length > 0 || !currentPhrase) return;
+
+  if (currentPhrase.mode === "mastery") {
+    recordMasteryPhraseOutcome("cleared");
+    return;
   }
+
+  if (!currentPhrase.clean) {
+    showPhraseFeedback("Practice only", currentPhrase.answerText, "Clean first cuts count for progress");
+  }
+  recordPhraseOutcome(currentPhrase.clean ? "cleared" : "missed");
 }
 
 function getBoundaryOffsets(tokens) {
@@ -1795,7 +1987,8 @@ function createChallenge() {
   const cfg = LEVEL_CONFIG[selectedLevel];
   const picked = pickEntry();
   const entry = picked.entry;
-  const maxAllowed = cfg.chunkMax;
+  const isMastery = picked.stage?.masteryStage === true;
+  const maxAllowed = isMastery ? entry.tokens.length : cfg.chunkMax;
   let desiredMax = Math.min(entry.tokens.length, maxAllowed);
   let desiredMin = Math.min(cfg.chunkMin, desiredMax);
 
@@ -1804,28 +1997,43 @@ function createChallenge() {
     desiredMin = desiredMax;
   }
 
-  let length = entry.tokens.length <= desiredMax
+  let length = isMastery || entry.tokens.length <= desiredMax
     ? entry.tokens.length
     : randomInt(desiredMin, desiredMax);
   let start = entry.tokens.length === length ? 0 : randomInt(0, entry.tokens.length - length);
   let tokens = entry.tokens.slice(start, start + length);
   const fontSize = baseFontSize();
-  const maxItemWidth = W < 520 ? W * 0.84 : W < 720 ? W * 0.7 : W * 0.58;
+  const maxItemWidth = isMastery
+    ? W < 520 ? W * 0.92 : W < 720 ? W * 0.82 : W * 0.66
+    : W < 520 ? W * 0.84 : W < 720 ? W * 0.7 : W * 0.58;
   let measured = measureChallenge(tokens, fontSize);
 
-  while (tokens.length > 2 && measured.textWidth > maxItemWidth) {
+  while (!isMastery && tokens.length > 2 && measured.textWidth > maxItemWidth) {
     length -= 1;
     start = Math.min(start, entry.tokens.length - length);
     tokens = entry.tokens.slice(start, start + length);
     measured = measureChallenge(tokens, fontSize);
   }
 
+  if (isMastery && measured.textWidth > maxItemWidth) {
+    const masteryFittedSize = Math.max(24, Math.floor(fontSize * maxItemWidth / measured.textWidth));
+    measured = measureChallenge(tokens, masteryFittedSize);
+    measured.fontSize = masteryFittedSize;
+
+    if (measured.textWidth > maxItemWidth && entry.tokens.length > cfg.chunkMax) {
+      length = Math.min(entry.tokens.length, cfg.chunkMax + 1);
+      start = entry.tokens.length === length ? 0 : randomInt(0, entry.tokens.length - length);
+      tokens = entry.tokens.slice(start, start + length);
+      measured = measureChallenge(tokens, fontSize);
+    }
+  }
+
   if (measured.textWidth > maxItemWidth) {
-    const fittedSize = Math.max(32, Math.floor(fontSize * maxItemWidth / measured.textWidth));
+    const fittedSize = Math.max(isMastery ? 24 : 32, Math.floor(fontSize * maxItemWidth / measured.textWidth));
     measured = measureChallenge(tokens, fittedSize);
     measured.fontSize = fittedSize;
   } else {
-    measured.fontSize = fontSize;
+    measured.fontSize ??= fontSize;
   }
 
   return {
@@ -1834,7 +2042,8 @@ function createChallenge() {
     gloss: entry.gloss,
     level: entry.level,
     sublevel: entry.sublevel,
-    curriculumStageId: picked.stage?.id ?? null
+    curriculumStageId: isMastery ? null : picked.stage?.id ?? null,
+    mastery: isMastery
   };
 }
 
@@ -1934,6 +2143,7 @@ function addActiveItemAfter(sourceItem, tokens, x) {
     level: sourceItem.level,
     sublevel: sourceItem.sublevel,
     curriculumStageId: sourceItem.curriculumStageId,
+    mastery: sourceItem.mastery,
     fontSize: sourceItem.fontSize,
     x,
     y: sourceItem.y,
@@ -2077,6 +2287,64 @@ function addMissedPhrase(item, boundaryX) {
   });
 }
 
+function getActiveItemBounds() {
+  if (activeItems.length === 0) return null;
+
+  return activeItems.reduce((bounds, item) => {
+    const rect = getItemRect(item);
+    return {
+      left: Math.min(bounds.left, rect.left),
+      right: Math.max(bounds.right, rect.right),
+      top: Math.min(bounds.top, rect.top),
+      bottom: Math.max(bounds.bottom, rect.bottom)
+    };
+  }, {
+    left: Infinity,
+    right: -Infinity,
+    top: Infinity,
+    bottom: -Infinity
+  });
+}
+
+function addRobotArmRemoval(phrase) {
+  const bounds = getActiveItemBounds();
+  if (!bounds || !phrase) return;
+
+  const fontSize = activeItems[0]?.fontSize ?? baseFontSize();
+  const text = phrase.displayText || activeItems.map((item) => item.text).join("");
+  const padding = clamp(fontSize * 0.36, 12, 22);
+  const width = Math.max(bounds.right - bounds.left, measureText(text, fontSize) + padding * 2);
+  const height = activeItems[0]?.height ?? clamp(fontSize * 1.42, 50, 78);
+  const startX = bounds.left + (bounds.right - bounds.left) / 2 - width / 2;
+  const startY = (bounds.top + bounds.bottom) / 2;
+
+  robotArmCarries.push({
+    text,
+    x: startX,
+    y: startY,
+    startX,
+    startY,
+    targetX: W + width + 90,
+    liftY: Math.max(72, scene.beltTop - 88),
+    width,
+    height,
+    padding,
+    fontSize,
+    elapsed: 0,
+    duration: ROBOT_ARM_DURATION
+  });
+}
+
+function showPhraseFeedback(title, answerText, detail = "") {
+  feedbackCards.push({
+    title,
+    answerText,
+    detail,
+    elapsed: 0,
+    duration: FEEDBACK_CARD_DURATION
+  });
+}
+
 function addSliceParticles(x, y, color, count) {
   if (prefersReducedMotion()) return;
 
@@ -2108,6 +2376,36 @@ function addScorePop(x, y) {
   });
 }
 
+function failCurrentPracticePhrase(x, y) {
+  if (!currentPhrase || currentPhrase.resolved) return;
+
+  const phrase = currentPhrase;
+  for (const item of activeItems) {
+    const boundaryX = getBoundaryXs(item)[0] ?? item.x + item.width;
+    addMissedPhrase(item, boundaryX);
+  }
+
+  activeItems = [];
+  combo = 0;
+  showPhraseFeedback("Answer", phrase.answerText, "Fresh phrase next");
+  recordPhraseOutcome("missed");
+  addSliceParticles(x, y, "#ef476f", 10);
+  updateUI();
+}
+
+function failCurrentMasteryPhrase(x, y) {
+  if (!currentPhrase || currentPhrase.resolved) return;
+
+  const phrase = currentPhrase;
+  addRobotArmRemoval(phrase);
+  activeItems = [];
+  combo = 0;
+  showPhraseFeedback("Mastery strike", phrase.answerText, "Clean first cuts only");
+  recordMasteryPhraseOutcome("missed");
+  addSliceParticles(x, y, "#ef476f", 12);
+  updateUI();
+}
+
 function registerWrongSlice(item, x) {
   const now = performance.now();
   if (now - item.lastWrongAt < 360) return;
@@ -2115,7 +2413,25 @@ function registerWrongSlice(item, x) {
   item.lastWrongAt = now;
   item.flash = 1;
   combo = 0;
+  if (currentPhrase && !currentPhrase.resolved) {
+    currentPhrase.clean = false;
+    currentPhrase.wrongAttempts += 1;
+  }
   addSliceParticles(x, item.y, "#ef476f", 8);
+
+  if (currentPhrase?.mode === "mastery") {
+    failCurrentMasteryPhrase(x, item.y);
+    return;
+  }
+
+  if (
+    currentPhrase?.mode === "practice"
+    && currentPhrase.wrongAttempts >= PRACTICE_WRONG_ATTEMPT_LIMIT
+  ) {
+    failCurrentPracticePhrase(x, item.y);
+    return;
+  }
+
   updateUI();
 }
 
@@ -2131,6 +2447,11 @@ function missItem(x = scene.beltEndX, y = scene.beltY) {
 }
 
 function missCurrentPhrase(x, y) {
+  if (currentPhrase?.mode === "mastery") {
+    failCurrentMasteryPhrase(x, y);
+    return;
+  }
+
   for (const item of activeItems) {
     const boundaryX = getBoundaryXs(item)[0] ?? item.x + item.width;
     addMissedPhrase(item, boundaryX);
@@ -2141,7 +2462,7 @@ function missCurrentPhrase(x, y) {
   missItem(x, y);
 }
 
-function checkSlice(x1, y1, x2, y2) {
+function findSliceAttemptForSegment(x1, y1, x2, y2) {
   for (let i = activeItems.length - 1; i >= 0; i--) {
     const item = activeItems[i];
     const rect = getItemRect(item);
@@ -2155,17 +2476,40 @@ function checkSlice(x1, y1, x2, y2) {
       continue;
     }
 
-    const nearest = findNearestBoundary(item, crossX);
-    if (nearest && nearest.distance <= nearest.tolerance) {
-      const completed = sliceItem(item, nearest.index, nearest.x);
-      if (completed) {
-        activeItems.splice(i, 1);
-        markPhraseClearedIfDone();
-      }
-      return;
-    }
+    return { item, crossX };
+  }
 
-    registerWrongSlice(item, crossX);
+  return null;
+}
+
+function applySliceAttempt(item, crossX) {
+  const itemIndex = activeItems.indexOf(item);
+  if (itemIndex === -1) return;
+
+  const nearest = findNearestBoundary(item, crossX);
+  if (nearest && nearest.distance <= nearest.tolerance) {
+    const completed = sliceItem(item, nearest.index, nearest.x);
+    if (completed) {
+      activeItems.splice(itemIndex, 1);
+      markPhraseClearedIfDone();
+    }
+    return;
+  }
+
+  registerWrongSlice(item, crossX);
+}
+
+function evaluateGesturePath(path) {
+  if (!Array.isArray(path) || path.length < 2 || activeItems.length === 0) return;
+
+  for (let i = 1; i < path.length; i++) {
+    const prev = path[i - 1];
+    const curr = path[i];
+    const attempt = findSliceAttemptForSegment(prev.x, prev.y, curr.x, curr.y);
+    if (!attempt) continue;
+
+    applySliceAttempt(attempt.item, attempt.crossX);
+    return;
   }
 }
 
@@ -2283,6 +2627,22 @@ function update(dt) {
     }
   }
 
+  for (let i = feedbackCards.length - 1; i >= 0; i--) {
+    const card = feedbackCards[i];
+    card.elapsed += dt;
+    if (card.elapsed >= card.duration) {
+      feedbackCards.splice(i, 1);
+    }
+  }
+
+  for (let i = robotArmCarries.length - 1; i >= 0; i--) {
+    const carry = robotArmCarries[i];
+    carry.elapsed += dt;
+    if (carry.elapsed >= carry.duration) {
+      robotArmCarries.splice(i, 1);
+    }
+  }
+
   for (let i = slashTrail.length - 1; i >= 0; i--) {
     slashTrail[i].life -= dt / 280;
     if (slashTrail[i].life <= 0) slashTrail.splice(i, 1);
@@ -2296,11 +2656,13 @@ function draw() {
   drawBuckets();
   drawConveyor();
   drawItems();
+  drawRobotArmCarries();
   drawMissedFragments();
   drawParticles();
   drawScorePops();
   drawCelebrationBits();
   drawCompletionCelebrations();
+  drawFeedbackCards();
   drawSlashTrail();
 }
 
@@ -2522,6 +2884,106 @@ function drawItems() {
   }
 }
 
+function getRobotCarryPose(carry) {
+  const t = clamp(carry.elapsed / carry.duration, 0, 1);
+
+  if (t < 0.24) {
+    return {
+      x: carry.startX,
+      y: carry.startY,
+      clawY: lerp(0, carry.startY - carry.height / 2, easeOutCubic(t / 0.24)),
+      gripping: false
+    };
+  }
+
+  if (t < 0.5) {
+    const localT = easeOutCubic((t - 0.24) / 0.26);
+    return {
+      x: carry.startX,
+      y: lerp(carry.startY, carry.liftY, localT),
+      clawY: lerp(carry.startY - carry.height / 2, carry.liftY - carry.height / 2, localT),
+      gripping: true
+    };
+  }
+
+  if (t < 0.84) {
+    const localT = easeInCubic((t - 0.5) / 0.34);
+    return {
+      x: lerp(carry.startX, carry.targetX, localT),
+      y: carry.liftY,
+      clawY: carry.liftY - carry.height / 2,
+      gripping: true
+    };
+  }
+
+  const localT = easeOutCubic((t - 0.84) / 0.16);
+  return {
+    x: carry.targetX,
+    y: lerp(carry.liftY, carry.startY, localT),
+    clawY: lerp(carry.liftY - carry.height / 2, carry.startY - carry.height / 2, localT),
+    gripping: true
+  };
+}
+
+function drawRobotArmCarries() {
+  for (const carry of robotArmCarries) {
+    const pose = getRobotCarryPose(carry);
+    const centerX = pose.x + carry.width / 2;
+    const itemTop = pose.y - carry.height / 2;
+    const clawY = pose.gripping ? itemTop - 8 : pose.clawY;
+
+    ctx.save();
+    ctx.strokeStyle = "#2f3b46";
+    ctx.lineWidth = 8;
+    ctx.lineCap = "round";
+    ctx.beginPath();
+    ctx.moveTo(centerX, 0);
+    ctx.lineTo(centerX, clawY);
+    ctx.stroke();
+
+    ctx.strokeStyle = "#9aa6b2";
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.moveTo(centerX, 0);
+    ctx.lineTo(centerX, clawY);
+    ctx.stroke();
+
+    ctx.fillStyle = "#253746";
+    roundRect(ctx, centerX - 26, clawY - 8, 52, 16, 5);
+    ctx.fill();
+    ctx.strokeStyle = "#d6dde5";
+    ctx.lineWidth = 2;
+    ctx.stroke();
+
+    ctx.strokeStyle = "#253746";
+    ctx.lineWidth = 5;
+    ctx.beginPath();
+    ctx.moveTo(centerX - 15, clawY + 4);
+    ctx.lineTo(centerX - 28, clawY + 24);
+    ctx.moveTo(centerX + 15, clawY + 4);
+    ctx.lineTo(centerX + 28, clawY + 24);
+    ctx.stroke();
+
+    ctx.fillStyle = "rgba(19, 31, 43, 0.26)";
+    roundRect(ctx, pose.x + 5, itemTop + 7, carry.width, carry.height, 8);
+    ctx.fill();
+
+    ctx.fillStyle = "#fffaf0";
+    roundRect(ctx, pose.x, itemTop, carry.width, carry.height, 8);
+    ctx.fill();
+    ctx.strokeStyle = "#ef476f";
+    ctx.lineWidth = 3;
+    ctx.stroke();
+
+    ctx.font = thaiFont(carry.fontSize);
+    ctx.textBaseline = "middle";
+    ctx.fillStyle = "#111827";
+    ctx.fillText(carry.text, pose.x + carry.padding, pose.y + 1);
+
+    ctx.restore();
+  }
+}
+
 function drawItem(item) {
   const rect = getItemRect(item);
   const drawOffsetX = (item.bump || 0) * (item.bumpOffset || 0);
@@ -2550,6 +3012,53 @@ function drawItem(item) {
   ctx.textBaseline = "middle";
   ctx.fillStyle = "#111827";
   ctx.fillText(item.text, item.x + item.padding + drawOffsetX, item.y + 1);
+  ctx.restore();
+}
+
+function drawFeedbackCards() {
+  if (feedbackCards.length === 0) return;
+
+  const card = feedbackCards[feedbackCards.length - 1];
+  const alpha = Math.min(
+    easeOutCubic(clamp(card.elapsed / 180, 0, 1)),
+    clamp((card.duration - card.elapsed) / 240, 0, 1)
+  );
+  const width = Math.min(W - 28, 620);
+  const height = card.detail ? 104 : 82;
+  const x = W / 2 - width / 2;
+  const y = Math.max(76, scene.beltTop - height - 26);
+
+  ctx.save();
+  ctx.globalAlpha = alpha;
+  ctx.fillStyle = "rgba(15, 23, 42, 0.3)";
+  roundRect(ctx, x + 5, y + 7, width, height, 8);
+  ctx.fill();
+
+  ctx.fillStyle = "#fffaf0";
+  roundRect(ctx, x, y, width, height, 8);
+  ctx.fill();
+  ctx.strokeStyle = "#17212b";
+  ctx.lineWidth = 3;
+  ctx.stroke();
+
+  drawFittedText(card.title, W / 2, y + 22, width - 28, 18, 12, {
+    fill: "#37515e",
+    weight: 900
+  });
+  drawFittedText(card.answerText, W / 2, y + (card.detail ? 55 : 52), width - 32, 30, 16, {
+    fill: "#111827",
+    stroke: "rgba(255, 250, 240, 0.72)",
+    strokeWidth: 5,
+    weight: 900
+  });
+
+  if (card.detail) {
+    drawFittedText(card.detail, W / 2, y + height - 20, width - 32, 15, 10, {
+      fill: "#435263",
+      weight: 800
+    });
+  }
+
   ctx.restore();
 }
 
@@ -2956,6 +3465,8 @@ function clearRunState() {
   scorePops = [];
   celebrationBits = [];
   completionCelebrations = [];
+  feedbackCards = [];
+  robotArmCarries = [];
   slashTrail = [];
   spawnCooldown = 0;
   lastTime = 0;
@@ -2965,6 +3476,7 @@ function clearRunState() {
   isPointerDown = false;
   pointerPath = [];
   currentPhrase = null;
+  masteryRun = null;
   entryDecks.clear();
   lastPickedEntry = null;
 }
@@ -3035,21 +3547,24 @@ canvas.addEventListener("pointermove", (event) => {
   if (!prefersReducedMotion()) {
     slashTrail.push({ ...pos, life: 1 });
   }
-
-  if (pointerPath.length >= 2) {
-    const prev = pointerPath[pointerPath.length - 2];
-    checkSlice(prev.x, prev.y, pos.x, pos.y);
-  }
 });
 
-function endPointer(event) {
+function endPointer(event, shouldEvaluate = false) {
   if (event) event.preventDefault();
+  if (shouldEvaluate && isPointerDown && gameRunning) {
+    const pos = getPointerPos(event);
+    const lastPos = pointerPath[pointerPath.length - 1];
+    if (!lastPos || lastPos.x !== pos.x || lastPos.y !== pos.y) {
+      pointerPath.push(pos);
+    }
+    evaluateGesturePath(pointerPath);
+  }
   isPointerDown = false;
   pointerPath = [];
 }
 
-canvas.addEventListener("pointerup", endPointer);
-canvas.addEventListener("pointercancel", endPointer);
+canvas.addEventListener("pointerup", (event) => endPointer(event, true));
+canvas.addEventListener("pointercancel", (event) => endPointer(event, false));
 canvas.addEventListener("pointerleave", () => {
   if (!isPointerDown) return;
   isPointerDown = false;
@@ -3063,6 +3578,11 @@ for (const button of levelButtons) {
 stageSelectorEl.addEventListener("click", (event) => {
   const button = event.target.closest(".stage-btn");
   if (!button || button.disabled) return;
+  if (button.dataset.mastery === "true") {
+    updateUI();
+    draw();
+    return;
+  }
 
   setCurrentStage(selectedLevel, button.dataset.stage);
   updateUI();
