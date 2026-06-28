@@ -1,0 +1,66 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630" role="img" aria-labelledby="title desc">
+  <title id="title">Thai Word Slice social preview</title>
+  <desc id="desc">A preview card for Thai Word Slice, a Thai word-boundary slicing game.</desc>
+  <defs>
+    <linearGradient id="sky" x1="0" x2="0" y1="0" y2="1">
+      <stop offset="0" stop-color="#8bd1e7"/>
+      <stop offset="0.52" stop-color="#e7eee8"/>
+      <stop offset="1" stop-color="#57606f"/>
+    </linearGradient>
+    <linearGradient id="belt" x1="0" x2="1" y1="0" y2="0">
+      <stop offset="0" stop-color="#25313d"/>
+      <stop offset="1" stop-color="#17212b"/>
+    </linearGradient>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="150%">
+      <feDropShadow dx="0" dy="18" stdDeviation="22" flood-color="#17212b" flood-opacity="0.25"/>
+    </filter>
+  </defs>
+
+  <rect width="1200" height="630" fill="url(#sky)"/>
+  <circle cx="980" cy="130" r="94" fill="#ffffff" opacity="0.28"/>
+  <circle cx="1038" cy="110" r="66" fill="#ffffff" opacity="0.2"/>
+
+  <g filter="url(#shadow)">
+    <rect x="90" y="82" width="1020" height="466" rx="28" fill="#fffaf0" opacity="0.96"/>
+    <rect x="90" y="82" width="1020" height="466" rx="28" fill="none" stroke="#ffffff" stroke-width="3" opacity="0.72"/>
+  </g>
+
+  <g transform="translate(132 124)">
+    <rect x="0" y="0" width="84" height="84" rx="20" fill="#17212b"/>
+    <circle cx="42" cy="42" r="32" fill="#ffffff"/>
+    <text x="42" y="56" fill="#000000" font-family="Noto Sans Thai, Leelawadee UI, Tahoma, sans-serif" font-size="54" font-weight="900" text-anchor="middle">ก</text>
+  </g>
+
+  <text x="240" y="166" fill="#16202a" font-family="Noto Sans Thai, Leelawadee UI, Tahoma, sans-serif" font-size="74" font-weight="900">Thai Word Slice</text>
+  <text x="244" y="216" fill="#37515e" font-family="Noto Sans Thai, Leelawadee UI, Tahoma, sans-serif" font-size="31" font-weight="800">Practice Thai word boundaries by slicing phrases at real breaks.</text>
+
+  <g transform="translate(160 286)">
+    <rect x="0" y="44" width="880" height="104" rx="24" fill="url(#belt)"/>
+    <rect x="22" y="70" width="836" height="52" rx="12" fill="#3f4c58"/>
+    <path d="M28 96h820" stroke="#9aa6b2" stroke-width="22" stroke-linecap="round" stroke-dasharray="34 34" opacity="0.68"/>
+
+    <g filter="url(#shadow)">
+      <rect x="116" y="0" width="360" height="92" rx="16" fill="#ffffff" stroke="#17212b" stroke-width="5"/>
+      <text x="296" y="60" fill="#17212b" font-family="Noto Sans Thai, Leelawadee UI, Tahoma, sans-serif" font-size="42" font-weight="900" text-anchor="middle">ฉัน|กิน|ข้าว</text>
+    </g>
+
+    <path d="M535 46h92" stroke="#ef476f" stroke-width="12" stroke-linecap="round"/>
+    <path d="M624 46l-34-26v52z" fill="#ef476f"/>
+
+    <g filter="url(#shadow)">
+      <rect x="670" y="0" width="258" height="92" rx="16" fill="#e8f8ef" stroke="#24a66a" stroke-width="5"/>
+      <text x="799" y="60" fill="#0f5132" font-family="Noto Sans Thai, Leelawadee UI, Tahoma, sans-serif" font-size="42" font-weight="900" text-anchor="middle">ฉันกินข้าว</text>
+    </g>
+  </g>
+
+  <g transform="translate(164 493)" font-family="Noto Sans Thai, Leelawadee UI, Tahoma, sans-serif" font-weight="900">
+    <rect x="0" y="0" width="122" height="48" rx="12" fill="#e7f6fb" stroke="#118ab2" stroke-width="3"/>
+    <text x="61" y="32" fill="#0f5067" font-size="24" text-anchor="middle">A1</text>
+    <rect x="142" y="0" width="122" height="48" rx="12" fill="#ffffff" stroke="#cbd5e1" stroke-width="3"/>
+    <text x="203" y="32" fill="#203040" font-size="24" text-anchor="middle">A2</text>
+    <rect x="284" y="0" width="122" height="48" rx="12" fill="#ffffff" stroke="#cbd5e1" stroke-width="3"/>
+    <text x="345" y="32" fill="#203040" font-size="24" text-anchor="middle">B1</text>
+  </g>
+
+  <text x="1036" y="529" fill="#37515e" font-family="Noto Sans Thai, Leelawadee UI, Tahoma, sans-serif" font-size="24" font-weight="800" text-anchor="end">word-slice.netlify.app</text>
+</svg>

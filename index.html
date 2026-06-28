@@ -4,6 +4,27 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
 <title>Thai Word Slice</title>
+<meta name="description" content="Practice Thai word boundaries in a fast, level-based slicing game with beginner-to-intermediate phrases and progress tracking.">
+<meta name="application-name" content="Thai Word Slice">
+<meta name="theme-color" content="#8bd1e7">
+<meta property="og:title" content="Thai Word Slice">
+<meta property="og:description" content="Practice Thai word boundaries in a fast, level-based slicing game with beginner-to-intermediate phrases and progress tracking.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://word-slice.netlify.app/">
+<meta property="og:site_name" content="Thai Word Slice">
+<meta property="og:locale" content="en_US">
+<meta property="og:image" content="https://word-slice.netlify.app/social-card.png">
+<meta property="og:image:secure_url" content="https://word-slice.netlify.app/social-card.png">
+<meta property="og:image:type" content="image/png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="Thai Word Slice word-boundary slicing game preview">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Thai Word Slice">
+<meta name="twitter:description" content="Practice Thai word boundaries in a fast, level-based slicing game with beginner-to-intermediate phrases and progress tracking.">
+<meta name="twitter:image" content="https://word-slice.netlify.app/social-card.png">
+<meta name="twitter:image:alt" content="Thai Word Slice word-boundary slicing game preview">
+<link rel="canonical" href="https://word-slice.netlify.app/">
 <link rel="icon" type="image/svg+xml" href="favicon.svg">
 <style>
 * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -574,6 +595,7 @@ const MOBILE_SPEED_REFERENCE_WIDTH = 1280;
 const LOADING_REVEAL_DELAY = 180;
 const START_BUTTON_LABEL = startButton.textContent;
 const RESTART_BUTTON_LABEL = restartButton.textContent;
+const SIMILARITY_IGNORED_TOKENS = new Set(["ครับ", "ค่ะ", "คะ", "ผม", "ดิฉัน"]);
 const reducedMotionQuery = typeof window.matchMedia === "function"
   ? window.matchMedia("(prefers-reduced-motion: reduce)")
   : null;
@@ -790,6 +812,9 @@ let isPointerDown = false;
 let pointerPath = [];
 let currentPhrase = null;
 let progressState = loadProgressState();
+let entriesById = new Map();
+let entryDecks = new Map();
+let lastPickedEntry = null;
 
 function clamp(value, min, max) {
   return Math.min(max, Math.max(min, value));
@@ -887,6 +912,9 @@ function indexEntriesByLevel(entries) {
 function installGameData(rawData) {
   corpus = normalizeGameData(rawData);
   entriesByLevel = indexEntriesByLevel(corpus.entries);
+  entriesById = new Map(corpus.entries.map((entry) => [entry.id, entry]));
+  entryDecks.clear();
+  lastPickedEntry = null;
   window.THAI_GAME_DATA = undefined;
   return corpus;
 }
@@ -1192,6 +1220,35 @@ function entryMatchesStage(entry, stage) {
   return true;
 }
 
+function getComparableTokens(entry) {
+  return (entry.tokens ?? []).filter((token) => !SIMILARITY_IGNORED_TOKENS.has(token));
+}
+
+function getComparableTokenKey(entry) {
+  return getComparableTokens(entry).join("|");
+}
+
+function entriesAreVerySimilar(first, second) {
+  if (!first || !second) return false;
+  if (first.id === second.id) return true;
+
+  const firstKey = getComparableTokenKey(first);
+  const secondKey = getComparableTokenKey(second);
+  if (firstKey && firstKey === secondKey) return true;
+
+  const firstTokens = new Set(getComparableTokens(first));
+  const secondTokens = new Set(getComparableTokens(second));
+  const largestSize = Math.max(firstTokens.size, secondTokens.size);
+  if (largestSize < 3) return false;
+
+  let sharedCount = 0;
+  for (const token of firstTokens) {
+    if (secondTokens.has(token)) sharedCount += 1;
+  }
+
+  return sharedCount / largestSize >= 0.8;
+}
+
 function hasCookie(name) {
   return document.cookie.split(";").some((entry) => {
     return entry.trim().startsWith(`${encodeURIComponent(name)}=`);
@@ -1412,14 +1469,27 @@ function chooseWeightedStagePool(stage) {
   const roll = Math.random();
 
   if (stretchPool.length > 0 && roll < 0.1) {
-    return { pool: stretchPool, stageId: getStages(stage.level)[getStageIndex(stage.level, stage.id) + 1].id };
+    const nextStage = getStages(stage.level)[getStageIndex(stage.level, stage.id) + 1];
+    return {
+      pool: stretchPool,
+      stageId: nextStage.id,
+      poolKey: `stretch:${stage.id}:${nextStage.id}`
+    };
   }
 
   if (reviewPool.length > 0 && roll < 0.3) {
-    return { pool: reviewPool, stageId: null };
+    return {
+      pool: reviewPool,
+      stageId: null,
+      poolKey: `review:${stage.level}:${stage.id}`
+    };
   }
 
-  return { pool: currentPool, stageId: stage.id };
+  return {
+    pool: currentPool,
+    stageId: stage.id,
+    poolKey: `stage:${stage.id}`
+  };
 }
 
 function findStageForEntry(entry, fallbackStage) {
@@ -1429,20 +1499,97 @@ function findStageForEntry(entry, fallbackStage) {
   return stage ? { ...stage, level: fallbackStage.level } : fallbackStage;
 }
 
+function shuffleEntryIds(entries) {
+  const ids = entries.map((entry) => entry.id);
+  for (let i = ids.length - 1; i > 0; i--) {
+    const j = randomInt(0, i);
+    [ids[i], ids[j]] = [ids[j], ids[i]];
+  }
+  return ids;
+}
+
+function getPoolSignature(pool) {
+  return pool.map((entry) => entry.id).join("|");
+}
+
+function getEntryDeck(poolKey, pool) {
+  const signature = getPoolSignature(pool);
+  let deck = entryDecks.get(poolKey);
+
+  if (!deck || deck.signature !== signature) {
+    deck = {
+      signature,
+      queue: shuffleEntryIds(pool)
+    };
+    entryDecks.set(poolKey, deck);
+  }
+
+  if (deck.queue.length === 0) {
+    deck.queue = shuffleEntryIds(pool);
+  }
+
+  return deck;
+}
+
+function drawEntryFromDeck(poolKey, pool) {
+  if (pool.length === 0) return null;
+  if (pool.length === 1) {
+    lastPickedEntry = pool[0];
+    return pool[0];
+  }
+
+  const deck = getEntryDeck(poolKey, pool);
+  const deferredIds = [];
+  let selected = null;
+  const attemptCount = deck.queue.length;
+
+  for (let i = 0; i < attemptCount; i++) {
+    const entryId = deck.queue.shift();
+    const candidate = entriesById.get(entryId);
+    if (!candidate) continue;
+
+    if (lastPickedEntry && entriesAreVerySimilar(candidate, lastPickedEntry)) {
+      deferredIds.push(entryId);
+      continue;
+    }
+
+    selected = candidate;
+    break;
+  }
+
+  if (!selected && deferredIds.length > 0) {
+    selected = entriesById.get(deferredIds.shift()) ?? null;
+  }
+
+  deck.queue.push(...deferredIds);
+
+  if (!selected) {
+    deck.queue = shuffleEntryIds(pool);
+    selected = entriesById.get(deck.queue.shift()) ?? pool[Math.floor(Math.random() * pool.length)];
+  }
+
+  lastPickedEntry = selected;
+  return selected;
+}
+
 function pickEntry() {
   const stage = getCurrentStage(selectedLevel);
   if (!stage) {
     const fallbackPool = entriesByLevel[selectedLevel] ?? corpus.entries;
-    return { entry: fallbackPool[Math.floor(Math.random() * fallbackPool.length)], stage: null };
+    return {
+      entry: drawEntryFromDeck(`fallback:${selectedLevel}`, fallbackPool),
+      stage: null
+    };
   }
 
-  let { pool, stageId } = chooseWeightedStagePool(stage);
+  let { pool, stageId, poolKey } = chooseWeightedStagePool(stage);
   if (pool.length === 0) {
     pool = entriesByLevel[selectedLevel] ?? corpus.entries;
     stageId = stage.id;
+    poolKey = `fallback:${selectedLevel}:${stage.id}`;
   }
 
-  const entry = pool[Math.floor(Math.random() * pool.length)];
+  const entry = drawEntryFromDeck(poolKey, pool);
   const entryStage = stageId
     ? (getStageById(stageId) ?? stage)
     : findStageForEntry(entry, stage);
@@ -2818,6 +2965,8 @@ function clearRunState() {
   isPointerDown = false;
   pointerPath = [];
   currentPhrase = null;
+  entryDecks.clear();
+  lastPickedEntry = null;
 }
 
 async function startGame() {
