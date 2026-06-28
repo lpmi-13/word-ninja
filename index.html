@@ -599,6 +599,7 @@ const PRACTICE_WRONG_ATTEMPT_LIMIT = 2;
 const MASTERY_REQUIRED_CLEAN_PHRASES = 5;
 const MASTERY_WRONG_ATTEMPT_LIMIT = 3;
 const FEEDBACK_CARD_DURATION = 1850;
+const ANSWER_FEEDBACK_CARD_DURATION = 3000;
 const ROBOT_ARM_DURATION = 1450;
 const SIMILARITY_IGNORED_TOKENS = new Set(["ครับ", "ค่ะ", "คะ", "ผม", "ดิฉัน"]);
 const reducedMotionQuery = typeof window.matchMedia === "function"
@@ -1079,11 +1080,12 @@ function normalizeRecentProgress(value) {
   return value.slice(-20).map((entry) => entry ? 1 : 0);
 }
 
-function normalizeStageProgress(value) {
+function normalizeStageProgress(value, stage = null) {
   const progress = value && typeof value === "object" ? value : {};
+  const seen = toProgressCount(progress.seen);
 
   return {
-    seen: toProgressCount(progress.seen),
+    seen: stage?.targetSeen ? Math.min(seen, stage.targetSeen) : seen,
     cleared: toProgressCount(progress.cleared),
     missed: toProgressCount(progress.missed),
     mastered: progress.mastered === true,
@@ -1117,7 +1119,7 @@ function normalizeProgressState(parsed, fallback) {
   for (const level of Object.keys(CURRICULUM)) {
     for (const stage of getStages(level)) {
       if (Object.prototype.hasOwnProperty.call(parsedStages, stage.id)) {
-        stages[stage.id] = normalizeStageProgress(parsedStages[stage.id]);
+        stages[stage.id] = normalizeStageProgress(parsedStages[stage.id], stage);
       }
     }
   }
@@ -1184,6 +1186,43 @@ function getStageAccuracy(stageId) {
 function getStageCompletion(stage) {
   const progress = getStageProgress(stage.id);
   return clamp(progress.seen / stage.targetSeen, 0, 1);
+}
+
+function getDisplayedStageSeen(stage) {
+  const progress = getStageProgress(stage.id);
+  return Math.min(progress.seen, stage.targetSeen);
+}
+
+function getStageRatioText(stage, allowComplete = false) {
+  const seen = getDisplayedStageSeen(stage);
+  if (seen >= stage.targetSeen && !allowComplete) return "";
+  return `${seen}/${stage.targetSeen}`;
+}
+
+function getStageHudText(stage, allowCompleteRatio = false) {
+  const ratioText = getStageRatioText(stage, allowCompleteRatio);
+  return `${stage.id} ${stage.label}${ratioText ? ` ${ratioText}` : ""}`;
+}
+
+function getStageSelectorDetail(stage, mastered) {
+  if (mastered) return "Mastered";
+
+  const ratioText = getStageRatioText(stage);
+  if (ratioText) {
+    return `${ratioText} ${Math.round(getStageCompletion(stage) * 100)}%`;
+  }
+
+  return `Accuracy ${Math.round(getStageAccuracy(stage.id) * 100)}%`;
+}
+
+function getActiveStageCompletionStage(level = selectedLevel) {
+  for (let i = completionCelebrations.length - 1; i >= 0; i--) {
+    const celebration = completionCelebrations[i];
+    if (celebration.type !== "stage" || celebration.level !== level) continue;
+    return getStageById(celebration.stageId);
+  }
+
+  return null;
 }
 
 function isStageMastered(stage) {
@@ -1432,8 +1471,6 @@ function renderStageSelector() {
   stageSelectorEl.replaceChildren();
 
   stages.forEach((stage, index) => {
-    const progress = getStageProgress(stage.id);
-    const completion = Math.round(getStageCompletion(stage) * 100);
     const unlocked = isStageUnlocked(selectedLevel, index);
     const mastered = isStageMastered(stage);
     const button = document.createElement("button");
@@ -1446,7 +1483,7 @@ function renderStageSelector() {
     button.disabled = !unlocked;
     button.classList.toggle("is-active", currentStage?.id === stage.id);
     button.classList.toggle("is-mastered", mastered);
-    detail.textContent = mastered ? "Mastered" : `${progress.seen}/${stage.targetSeen} ${completion}%`;
+    detail.textContent = getStageSelectorDetail(stage, mastered);
     button.append(label, detail);
     stageSelectorEl.append(button);
   });
@@ -1476,12 +1513,16 @@ function updateUI() {
   const stage = getCurrentStage(selectedLevel);
   scoreEl.textContent = `Score ${score}`;
   livesEl.textContent = `${"♥".repeat(lives)}${"♡".repeat(Math.max(0, 3 - lives))}`;
-  if (stage?.masteryStage) {
+  const completedStage = getActiveStageCompletionStage();
+  if (completedStage) {
+    modeEl.textContent = getStageHudText(completedStage, true);
+  } else if (stage?.masteryStage) {
     const run = masteryRun?.level === selectedLevel ? masteryRun : { streak: 0, wrong: 0 };
-    modeEl.textContent = `${stage.id} ${run.streak}/${MASTERY_REQUIRED_CLEAN_PHRASES} clean ${run.wrong}/${MASTERY_WRONG_ATTEMPT_LIMIT}`;
+    const cleanCount = Math.min(run.streak, MASTERY_REQUIRED_CLEAN_PHRASES);
+    const wrongCount = Math.min(run.wrong, MASTERY_WRONG_ATTEMPT_LIMIT);
+    modeEl.textContent = `${stage.id} ${cleanCount}/${MASTERY_REQUIRED_CLEAN_PHRASES} clean ${wrongCount}/${MASTERY_WRONG_ATTEMPT_LIMIT}`;
   } else if (stage) {
-    const stageProgress = getStageProgress(stage.id);
-    modeEl.textContent = `${stage.id} ${stage.label} ${stageProgress.seen}/${stage.targetSeen}`;
+    modeEl.textContent = getStageHudText(stage);
   } else {
     modeEl.textContent = `${cfg.label} ${cfg.cefrLikeLevel ?? ""}`.trim();
   }
@@ -1697,7 +1738,10 @@ function recordPhraseSeen(stageId) {
   if (!stageId) return;
 
   const progress = getStageProgress(stageId);
-  progress.seen += 1;
+  const stage = getStageById(stageId);
+  progress.seen = stage?.targetSeen
+    ? Math.min(progress.seen + 1, stage.targetSeen)
+    : progress.seen + 1;
   saveProgressState();
   updateUI();
 }
@@ -1878,7 +1922,7 @@ function passLevelMastery(level) {
 }
 
 function failLevelMastery(level, answerText = "Sublevels reset") {
-  showPhraseFeedback("Mastery failed", answerText, "Sublevels reset; complete the level again");
+  showPhraseFeedback("Mastery failed", answerText, "Sublevels reset; complete the level again", ANSWER_FEEDBACK_CARD_DURATION);
   resetLevelProgress(level);
 }
 
@@ -1941,7 +1985,7 @@ function markPhraseClearedIfDone() {
   }
 
   if (!currentPhrase.clean) {
-    showPhraseFeedback("Practice only", currentPhrase.answerText, "Clean first cuts count for progress");
+    showPhraseFeedback("Practice only", currentPhrase.answerText, "Clean first cuts count for progress", ANSWER_FEEDBACK_CARD_DURATION);
   }
   recordPhraseOutcome(currentPhrase.clean ? "cleared" : "missed");
 }
@@ -2383,13 +2427,13 @@ function addRobotArmRemoval(phrase) {
   });
 }
 
-function showPhraseFeedback(title, answerText, detail = "") {
+function showPhraseFeedback(title, answerText, detail = "", duration = FEEDBACK_CARD_DURATION) {
   feedbackCards.push({
     title,
     answerText,
     detail,
     elapsed: 0,
-    duration: FEEDBACK_CARD_DURATION
+    duration
   });
 }
 
@@ -2435,7 +2479,7 @@ function failCurrentPracticePhrase(x, y) {
 
   activeItems = [];
   combo = 0;
-  showPhraseFeedback("Answer", phrase.answerText, "Fresh phrase next");
+  showPhraseFeedback("Answer", phrase.answerText, "Fresh phrase next", ANSWER_FEEDBACK_CARD_DURATION);
   recordPhraseOutcome("missed");
   addSliceParticles(x, y, "#ef476f", 10);
   updateUI();
@@ -2448,7 +2492,7 @@ function failCurrentMasteryPhrase(x, y) {
   addRobotArmRemoval(phrase);
   activeItems = [];
   combo = 0;
-  showPhraseFeedback("Mastery strike", phrase.answerText, "Clean first cuts only");
+  showPhraseFeedback("Mastery strike", phrase.answerText, "Clean first cuts only", ANSWER_FEEDBACK_CARD_DURATION);
   recordMasteryPhraseOutcome("missed");
   addSliceParticles(x, y, "#ef476f", 12);
   updateUI();
@@ -2667,13 +2711,16 @@ function update(dt) {
     if (bit.life <= 0 || bit.y > H + 80) celebrationBits.splice(i, 1);
   }
 
+  let removedCompletionCelebration = false;
   for (let i = completionCelebrations.length - 1; i >= 0; i--) {
     const celebration = completionCelebrations[i];
     celebration.elapsed += dt;
     if (celebration.elapsed >= celebration.duration) {
       completionCelebrations.splice(i, 1);
+      removedCompletionCelebration = true;
     }
   }
+  if (removedCompletionCelebration) updateUI();
 
   for (let i = feedbackCards.length - 1; i >= 0; i--) {
     const card = feedbackCards[i];
