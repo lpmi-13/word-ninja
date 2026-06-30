@@ -370,6 +370,13 @@ h1 {
   box-shadow: 0 10px 20px rgba(239, 71, 111, 0.26);
 }
 
+.btn-secondary {
+  border: 2px solid #118ab2;
+  background: #ffffff;
+  color: #0f5067;
+  box-shadow: none;
+}
+
 .btn:disabled,
 .level-btn:disabled {
   cursor: wait;
@@ -382,6 +389,156 @@ h1 {
 .hud-icon-button:focus-visible {
   outline: 4px solid rgba(17, 138, 178, 0.35);
   outline-offset: 2px;
+}
+
+.course-complete-prompt {
+  display: none;
+  margin-bottom: 18px;
+  border: 3px solid #17212b;
+  border-radius: 8px;
+  background: #fffaf0;
+  padding: 16px;
+  box-shadow: 6px 7px 0 rgba(15, 23, 42, 0.18);
+  overflow: hidden;
+}
+
+.course-complete-prompt.is-visible {
+  display: block;
+}
+
+.course-party {
+  position: relative;
+  height: 96px;
+  margin-bottom: 8px;
+}
+
+.clap-hand,
+.firework {
+  position: absolute;
+  display: block;
+  user-select: none;
+}
+
+.clap-hand {
+  bottom: 5px;
+  left: 50%;
+  font-size: 48px;
+  line-height: 1;
+  filter: drop-shadow(0 4px 0 rgba(23, 33, 43, 0.18));
+  transform-origin: 50% 100%;
+}
+
+.clap-hand.left {
+  transform: translateX(-58px) rotate(-18deg);
+  animation: clap-left 0.46s ease-in-out 3;
+}
+
+.clap-hand.right {
+  transform: translateX(12px) rotate(18deg) scaleX(-1);
+  animation: clap-right 0.46s ease-in-out 3;
+}
+
+.firework {
+  color: #ef476f;
+  font-size: 32px;
+  font-weight: 900;
+  line-height: 1;
+  opacity: 0;
+  animation: firework-pop 0.92s ease-out both;
+}
+
+.firework.one {
+  left: 14%;
+  top: 12px;
+}
+
+.firework.two {
+  left: 45%;
+  top: 0;
+  color: #118ab2;
+  animation-delay: 0.18s;
+}
+
+.firework.three {
+  right: 13%;
+  top: 16px;
+  color: #24a66a;
+  animation-delay: 0.32s;
+}
+
+.complete-kicker {
+  color: #37515e;
+  font-size: 13px;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.complete-title {
+  color: #16202a;
+  font-size: clamp(26px, 6vw, 38px);
+  font-weight: 900;
+  line-height: 1.05;
+}
+
+.complete-question {
+  margin-top: 6px;
+  color: #243648;
+  font-size: clamp(16px, 3.8vw, 20px);
+  font-weight: 800;
+  line-height: 1.3;
+  opacity: 0;
+  transform: translateY(6px);
+  transition: opacity 0.18s ease, transform 0.18s ease;
+}
+
+.course-complete-prompt.is-asking .complete-question {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.complete-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 14px;
+  opacity: 0;
+  transform: translateY(6px);
+  transition: opacity 0.18s ease, transform 0.18s ease;
+}
+
+.course-complete-prompt.is-asking .complete-actions {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.complete-actions .btn {
+  min-height: 48px;
+  font-size: clamp(16px, 4vw, 19px);
+  padding: 10px 12px;
+}
+
+@keyframes clap-left {
+  50% { transform: translateX(-38px) rotate(-4deg); }
+}
+
+@keyframes clap-right {
+  50% { transform: translateX(-8px) rotate(4deg) scaleX(-1); }
+}
+
+@keyframes firework-pop {
+  0% {
+    opacity: 0;
+    transform: scale(0.35);
+  }
+  45% {
+    opacity: 1;
+    transform: scale(1.25);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1.8) translateY(-18px);
+  }
 }
 
 .loading-title {
@@ -524,6 +681,26 @@ h1 {
   .stage-selector {
     grid-template-columns: 1fr;
   }
+
+  .complete-actions {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .clap-hand,
+  .firework {
+    animation: none;
+  }
+
+  .firework {
+    opacity: 1;
+  }
+
+  .complete-question,
+  .complete-actions {
+    transition: none;
+  }
 }
 </style>
 </head>
@@ -545,6 +722,22 @@ h1 {
 
 <div id="start-screen" class="screen">
   <div class="menu">
+    <div id="course-complete-prompt" class="course-complete-prompt" aria-live="polite">
+      <div class="course-party" aria-hidden="true">
+        <span class="firework one">✹</span>
+        <span class="firework two">✦</span>
+        <span class="firework three">✹</span>
+        <span class="clap-hand left">👏</span>
+        <span class="clap-hand right">👏</span>
+      </div>
+      <div class="complete-kicker">All levels mastered</div>
+      <div class="complete-title">Factory complete!</div>
+      <div class="complete-question">Reset your progress and start again?</div>
+      <div class="complete-actions">
+        <button class="btn btn-secondary" id="keep-progress-btn" type="button">Keep progress</button>
+        <button class="btn" id="reset-progress-btn" type="button">Reset progress</button>
+      </div>
+    </div>
     <h1>Thai Word Slice</h1>
     <div class="subtitle" lang="th">เกมหั่นคำไทย</div>
     <div class="example"><span lang="th">ฉัน|กิน|ข้าว</span> -> <span lang="th">ฉันกินข้าว</span></div>
@@ -615,6 +808,9 @@ const loadingScreen = document.getElementById("loading-screen");
 const loadingMessageEl = document.getElementById("loading-message");
 const loadingErrorEl = document.getElementById("loading-error");
 const loadingDismissButton = document.getElementById("loading-dismiss-btn");
+const courseCompletePrompt = document.getElementById("course-complete-prompt");
+const keepProgressButton = document.getElementById("keep-progress-btn");
+const resetProgressButton = document.getElementById("reset-progress-btn");
 const levelButtons = Array.from(document.querySelectorAll(".level-btn"));
 
 const THAI_FONT = '"Noto Sans Thai", "Leelawadee UI", Tahoma, sans-serif';
@@ -631,6 +827,16 @@ const MASTERY_WRONG_ATTEMPT_LIMIT = 3;
 const FEEDBACK_CARD_DURATION = 1850;
 const ANSWER_FEEDBACK_CARD_DURATION = 3000;
 const ROBOT_ARM_DURATION = 1450;
+const FEEDBACK_CARD_MAX_WIDTH = 620;
+const FEEDBACK_CARD_SIDE_GUTTER = 28;
+const FEEDBACK_CARD_SHORT_HEIGHT = 82;
+const FEEDBACK_CARD_DETAIL_HEIGHT = 104;
+const FEEDBACK_CARD_MIN_TOP = 76;
+const FEEDBACK_CARD_BELT_GAP = 26;
+const ROBOT_CARRY_FEEDBACK_CLEARANCE = 18;
+const ROBOT_CARRY_TOP_MARGIN = 14;
+const MASTERY_MENU_RETURN_DELAY = 1800;
+const COURSE_COMPLETE_QUESTION_DELAY = 1250;
 const SIMILARITY_IGNORED_TOKENS = new Set(["ครับ", "ค่ะ", "คะ", "ผม", "ดิฉัน"]);
 const reducedMotionQuery = typeof window.matchMedia === "function"
   ? window.matchMedia("(prefers-reduced-motion: reduce)")
@@ -840,6 +1046,9 @@ let feedbackCards = [];
 let robotArmCarries = [];
 let slashTrail = [];
 let spawnCooldown = 0;
+let pendingMasteryMenuReturn = null;
+let masteryMenuReturnTimer = null;
+let courseCompletePromptTimer = null;
 let lastTime = 0;
 let animFrame = null;
 let conveyorOffset = 0;
@@ -1064,6 +1273,20 @@ function getStages(level = selectedLevel) {
   return CURRICULUM[level]?.stages ?? [];
 }
 
+function getLevelOrder() {
+  return Object.keys(CURRICULUM).filter((level) => LEVEL_CONFIG[level]);
+}
+
+function getFirstLevel() {
+  return getLevelOrder()[0] ?? selectedLevel;
+}
+
+function getNextLevel(level) {
+  const levelOrder = getLevelOrder();
+  const index = levelOrder.indexOf(level);
+  return index >= 0 ? levelOrder[index + 1] ?? null : null;
+}
+
 function getStageById(stageId) {
   for (const level of Object.keys(CURRICULUM)) {
     const stage = CURRICULUM[level].stages.find((candidate) => candidate.id === stageId);
@@ -1187,6 +1410,53 @@ function saveProgressState() {
   } catch {
     // Progress persistence is optional; gameplay should continue if storage is unavailable.
   }
+}
+
+function clearMasteryMenuReturn() {
+  if (masteryMenuReturnTimer) {
+    window.clearTimeout(masteryMenuReturnTimer);
+  }
+  masteryMenuReturnTimer = null;
+  pendingMasteryMenuReturn = null;
+}
+
+function hideCourseCompletePrompt() {
+  if (courseCompletePromptTimer) {
+    window.clearTimeout(courseCompletePromptTimer);
+  }
+  courseCompletePromptTimer = null;
+  courseCompletePrompt.classList.remove("is-visible", "is-asking");
+}
+
+function showCourseCompletePrompt() {
+  if (courseCompletePromptTimer) {
+    window.clearTimeout(courseCompletePromptTimer);
+  }
+
+  courseCompletePrompt.classList.add("is-visible");
+  courseCompletePrompt.classList.remove("is-asking");
+
+  if (prefersReducedMotion()) {
+    courseCompletePrompt.classList.add("is-asking");
+    return;
+  }
+
+  courseCompletePromptTimer = window.setTimeout(() => {
+    courseCompletePrompt.classList.add("is-asking");
+    courseCompletePromptTimer = null;
+  }, COURSE_COMPLETE_QUESTION_DELAY);
+}
+
+function resetAllProgress() {
+  progressState = getDefaultProgressState();
+  selectedLevel = getFirstLevel();
+  masteryRun = null;
+  entryDecks.clear();
+  lastPickedEntry = null;
+  hideCourseCompletePrompt();
+  saveProgressState();
+  updateUI();
+  draw();
 }
 
 function getStageProgress(stageId) {
@@ -1346,7 +1616,7 @@ function getCurrentStage(level = selectedLevel) {
     return { ...nextAvailableStage, level };
   }
 
-  if (areLevelStagesMastered(level) && !isLevelMasteryPassed(level)) {
+  if (areLevelStagesMastered(level)) {
     return getMasteryStage(level);
   }
 
@@ -1452,6 +1722,11 @@ function resize() {
 
   for (const item of activeItems) {
     item.y = scene.beltY - scene.beltHeight * 0.72;
+  }
+
+  for (const carry of robotArmCarries) {
+    carry.targetX = W + carry.width + 90;
+    carry.liftY = getRobotCarryLiftY(carry.height);
   }
 
   if (!gameRunning) draw();
@@ -1585,13 +1860,17 @@ function updateUI() {
     const hud = getStageHudParts(completedStage);
     setModeDisplay(hud.title, hud.detail);
   } else if (stage?.masteryStage) {
-    const run = masteryRun?.level === selectedLevel ? masteryRun : { streak: 0, wrong: 0 };
-    const cleanCount = Math.min(run.streak, MASTERY_REQUIRED_CLEAN_PHRASES);
-    const wrongCount = Math.min(run.wrong, MASTERY_WRONG_ATTEMPT_LIMIT);
-    setModeDisplay(
-      `${stage.id} ${cleanCount}/${MASTERY_REQUIRED_CLEAN_PHRASES} clean`,
-      `${wrongCount}/${MASTERY_WRONG_ATTEMPT_LIMIT} strikes`
-    );
+    if (isLevelMasteryPassed(stage.level)) {
+      setModeDisplay(`${stage.id} mastered`, LEVEL_CONFIG[stage.level].label);
+    } else {
+      const run = masteryRun?.level === selectedLevel ? masteryRun : { streak: 0, wrong: 0 };
+      const cleanCount = Math.min(run.streak, MASTERY_REQUIRED_CLEAN_PHRASES);
+      const wrongCount = Math.min(run.wrong, MASTERY_WRONG_ATTEMPT_LIMIT);
+      setModeDisplay(
+        `${stage.id} ${cleanCount}/${MASTERY_REQUIRED_CLEAN_PHRASES} clean`,
+        `${wrongCount}/${MASTERY_WRONG_ATTEMPT_LIMIT} strikes`
+      );
+    }
   } else if (stage) {
     const activeStage = getCurrentPracticePhraseStage();
     const hudStage = activeStage?.level === selectedLevel ? activeStage : stage;
@@ -1957,6 +2236,21 @@ function resetLevelProgress(level) {
   updateUI();
 }
 
+function queueMasteryMenuReturn(level) {
+  const nextLevel = getNextLevel(level);
+  pendingMasteryMenuReturn = {
+    selectedLevel: nextLevel ?? level,
+    courseComplete: !nextLevel
+  };
+  spawnCooldown = Number.POSITIVE_INFINITY;
+
+  if (masteryMenuReturnTimer) {
+    window.clearTimeout(masteryMenuReturnTimer);
+  }
+
+  masteryMenuReturnTimer = window.setTimeout(returnToMenuAfterMastery, MASTERY_MENU_RETURN_DELAY);
+}
+
 function passLevelMastery(level) {
   const progress = getLevelMasteryProgress(level);
   progress.passed = true;
@@ -1965,6 +2259,7 @@ function passLevelMastery(level) {
   showPhraseFeedback("Level mastered", `${LEVEL_CONFIG[level].cefrLikeLevel} ${LEVEL_CONFIG[level].label}`, "Clean run complete");
   masteryRun = null;
   updateUI();
+  queueMasteryMenuReturn(level);
 }
 
 function failLevelMastery(level, answerText = "Sublevels reset") {
@@ -2202,6 +2497,7 @@ function getNextSpawnX() {
 
 function updatePhraseSpawn(dt) {
   if (!gameRunning) return;
+  if (pendingMasteryMenuReturn) return;
 
   if (activeItems.length > 0) {
     spawnCooldown = NEXT_PHRASE_DELAY;
@@ -2437,6 +2733,24 @@ function getActiveItemBounds() {
   });
 }
 
+function getFeedbackCardLayout(card = {}) {
+  const width = Math.min(W - FEEDBACK_CARD_SIDE_GUTTER, FEEDBACK_CARD_MAX_WIDTH);
+  const height = card.detail ? FEEDBACK_CARD_DETAIL_HEIGHT : FEEDBACK_CARD_SHORT_HEIGHT;
+  const x = W / 2 - width / 2;
+  const y = Math.max(FEEDBACK_CARD_MIN_TOP, scene.beltTop - height - FEEDBACK_CARD_BELT_GAP);
+
+  return { x, y, width, height };
+}
+
+function getRobotCarryLiftY(height) {
+  const defaultLiftY = scene.beltTop - 88;
+  const feedbackTop = getFeedbackCardLayout({ detail: true }).y;
+  const clearedLiftY = feedbackTop - ROBOT_CARRY_FEEDBACK_CLEARANCE - height / 2;
+  const topSafeLiftY = height / 2 + ROBOT_CARRY_TOP_MARGIN;
+
+  return Math.max(topSafeLiftY, Math.min(defaultLiftY, clearedLiftY));
+}
+
 function addRobotArmRemoval(phrase) {
   const bounds = getActiveItemBounds();
   if (!bounds || !phrase) return;
@@ -2457,7 +2771,7 @@ function addRobotArmRemoval(phrase) {
     startX,
     startY,
     targetX: W + width + 90,
-    liftY: Math.max(72, scene.beltTop - 88),
+    liftY: getRobotCarryLiftY(height),
     width,
     height,
     padding,
@@ -2793,13 +3107,13 @@ function draw() {
   drawBuckets();
   drawConveyor();
   drawItems();
-  drawRobotArmCarries();
   drawMissedFragments();
   drawParticles();
   drawScorePops();
   drawCelebrationBits();
   drawCompletionCelebrations();
   drawFeedbackCards();
+  drawRobotArmCarries();
   drawSlashTrail();
 }
 
@@ -3160,10 +3474,7 @@ function drawFeedbackCards() {
     easeOutCubic(clamp(card.elapsed / 180, 0, 1)),
     clamp((card.duration - card.elapsed) / 240, 0, 1)
   );
-  const width = Math.min(W - 28, 620);
-  const height = card.detail ? 104 : 82;
-  const x = W / 2 - width / 2;
-  const y = Math.max(76, scene.beltTop - height - 26);
+  const { x, y, width, height } = getFeedbackCardLayout(card);
 
   ctx.save();
   ctx.globalAlpha = alpha;
@@ -3596,6 +3907,8 @@ function gameLoop(timestamp) {
 }
 
 function clearRunState() {
+  clearMasteryMenuReturn();
+  hideCourseCompletePrompt();
   activeItems = [];
   fallingFragments = [];
   particles = [];
@@ -3618,7 +3931,38 @@ function clearRunState() {
   lastPickedEntry = null;
 }
 
+function showStartMenu() {
+  gameRunning = false;
+  if (animFrame) cancelAnimationFrame(animFrame);
+  animFrame = null;
+  combo = 0;
+  menuButton.style.display = "none";
+  startScreen.style.display = "flex";
+  gameOverScreen.style.display = "none";
+  updateUI();
+  draw();
+}
+
+function returnToMenuAfterMastery() {
+  const destination = pendingMasteryMenuReturn;
+  clearMasteryMenuReturn();
+
+  if (destination?.selectedLevel) {
+    selectedLevel = destination.selectedLevel;
+  }
+
+  clearRunState();
+  showStartMenu();
+
+  if (destination?.courseComplete) {
+    showCourseCompletePrompt();
+  }
+}
+
 async function startGame() {
+  hideCourseCompletePrompt();
+  clearMasteryMenuReturn();
+
   if (!(await ensureGameDataReady())) return;
 
   score = 0;
@@ -3636,15 +3980,8 @@ async function startGame() {
 }
 
 function returnToMenu() {
-  gameRunning = false;
-  if (animFrame) cancelAnimationFrame(animFrame);
   clearRunState();
-  combo = 0;
-  menuButton.style.display = "none";
-  startScreen.style.display = "flex";
-  gameOverScreen.style.display = "none";
-  updateUI();
-  draw();
+  showStartMenu();
 }
 
 function endGame() {
@@ -3730,6 +4067,12 @@ startButton.addEventListener("click", startGame);
 restartButton.addEventListener("click", startGame);
 howToDismissButton.addEventListener("click", dismissHowToSplash);
 loadingDismissButton.addEventListener("click", hideDataLoading);
+keepProgressButton.addEventListener("click", () => {
+  hideCourseCompletePrompt();
+  updateUI();
+  draw();
+});
+resetProgressButton.addEventListener("click", resetAllProgress);
 menuButton.addEventListener("click", returnToMenu);
 window.addEventListener("resize", resize);
 reducedMotionQuery?.addEventListener?.("change", (event) => {
