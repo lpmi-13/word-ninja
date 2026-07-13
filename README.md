@@ -2,6 +2,8 @@
 
 Word Slice is a Thai word-boundary slicing game.
 
+Live site is at [https://word-slice.netlify.app](https://word-slice.netlify.app)
+
 Thai text moves right-to-left on a cartoony factory conveyor belt. The player slices at valid word boundaries, and isolated single-word fragments get collected into factory buckets behind the belt.
 
 ## Thai Content Corpus
